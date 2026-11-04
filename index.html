@@ -90,12 +90,8 @@
     height: 100%;
     object-fit: contain;
     display: block;
-    transition: opacity 0.4s ease-in-out;
-    will-change: opacity;
+    will-change: transform;
   }
-  
-  #video-idle { opacity: 1; z-index: 1; }
-  #video-talk { opacity: 0; z-index: 2; }
 
   .video-bottom-bar {
     display: flex; align-items: center; justify-content: center; gap: 12px;
@@ -201,8 +197,7 @@
   <div class="video-stage" id="videoStage">
     <div class="video-box">
       <div class="video-stack">
-        <video id="video-idle" class="video-layer" src="piscando.mp4" playsinline muted loop></video>
-        <video id="video-talk" class="video-layer" src="falando.mp4" playsinline muted loop></video>
+        <video id="avatar-video" class="video-layer" src="frances.mp4" playsinline muted preload="auto"></video>
       </div>
       <div class="video-bottom-bar">
         <div class="video-start-wrap" id="videoStartWrap">
@@ -229,8 +224,17 @@
       var errorMsg = document.getElementById('agentErrorMsg');
       var errorDetail = document.getElementById('agentErrorDetail');
       var videoStage = document.getElementById('videoStage');
-      var videoIdle = document.getElementById('video-idle');
-      var videoTalk = document.getElementById('video-talk');
+      var video = document.getElementById('avatar-video');
+
+      var IDLE_START = 0;
+      var IDLE_END   = 3;
+      var TALK_START = 3;
+      var TALK_END   = 5;
+
+      var VOICE_THRESHOLD = 10;
+      var VOICE_ONSET_FRAMES = 1;
+      var SILENCE_TIMEOUT_MS = 220;
+      var SAMPLE_RATE_HZ = 90;
 
       var launcherEl = null;
       var bgApplied = false;
@@ -238,11 +242,14 @@
       var consultationStarted = false;
       var isTalking = false;
       var silenceTimer = null;
+      var onsetCount = 0;
       
       var audioCtx = null;
       var analyser = null;
       var dataArray = null;
       var hookedStreams = new WeakSet();
+      var connectedSources = [];
+      var lastAnalysisTime = 0;
 
       function showError(detail) {
         errorDetail.textContent = detail || 'Requested device not found';
@@ -252,66 +259,68 @@
         errorMsg.classList.remove('show');
       }
 
+      function onTimeUpdate() {
+        if (!isTalking) {
+          if (video.currentTime >= IDLE_END - 0.05 || video.currentTime < IDLE_START - 0.05) {
+            try { video.currentTime = IDLE_START; } catch(e){}
+          }
+        } else {
+          if (video.currentTime >= TALK_END - 0.05 || video.currentTime < TALK_START - 0.05) {
+            try { video.currentTime = TALK_START; } catch(e){}
+          }
+        }
+      }
+
       function activateVideoStage() {
         document.body.classList.add('video-active');
         videoStage.classList.add('active');
-        videoIdle.currentTime = 0;
-        videoIdle.play().catch(function(){});
-        videoTalk.pause();
-        videoTalk.style.opacity = '0';
-        videoIdle.style.opacity = '1';
         isTalking = false;
+        onsetCount = 0;
+        try {
+          video.currentTime = IDLE_START;
+          video.play().catch(function(){});
+        } catch(e){}
+        video.addEventListener('timeupdate', onTimeUpdate);
       }
 
       function deactivateVideoStage() {
         consultationStarted = false;
         document.body.classList.remove('video-active');
         videoStage.classList.remove('active');
-        videoIdle.pause();
-        videoTalk.pause();
+        try { video.removeEventListener('timeupdate', onTimeUpdate); } catch(e){}
+        try { video.pause(); } catch(e){}
         if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
         isTalking = false;
+        onsetCount = 0;
       }
 
-      // ========== LÓGICA DE CROSSFADE RÍGIDA ==========
+      // ========== TROCA IMEDIATA ==========
       
       function startTalking() {
         if (silenceTimer) {
           clearTimeout(silenceTimer);
           silenceTimer = null;
         }
-        
         if (isTalking) return;
-        
         isTalking = true;
-        videoTalk.currentTime = 0;
-        
-        var playPromise = videoTalk.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(function(e){ 
-            console.log("Erro ao dar play no video-talk:", e);
-            videoTalk.muted = true;
-            videoTalk.play().catch(function(err){ console.log("Falha no fallback:", err); });
-          });
-        }
-        
-        videoTalk.style.opacity = '1';
-        videoIdle.style.opacity = '0';
+        try {
+          video.currentTime = TALK_START;
+          if (video.paused) video.play().catch(function(){});
+        } catch(e){}
       }
 
       function stopTalking() {
         if (!isTalking) return;
         isTalking = false;
-        videoTalk.style.opacity = '0';
-        videoIdle.style.opacity = '1';
-        setTimeout(function() {
-          if (!isTalking) videoTalk.pause();
-        }, 450);
+        try {
+          video.currentTime = IDLE_START;
+          if (video.paused) video.play().catch(function(){});
+        } catch(e){}
       }
 
       function scheduleSilenceCheck() {
         if (silenceTimer) clearTimeout(silenceTimer);
-        silenceTimer = setTimeout(stopTalking, 350);
+        silenceTimer = setTimeout(stopTalking, SILENCE_TIMEOUT_MS);
       }
 
       function ensureAudioContext() {
@@ -319,7 +328,7 @@
           try {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 512;
+            analyser.fftSize = 1024;
             analyser.smoothingTimeConstant = 0.05;
             dataArray = new Uint8Array(analyser.frequencyBinCount);
           } catch (e) {
@@ -332,6 +341,21 @@
         return audioCtx;
       }
 
+      function analyzeVoiceBand() {
+        analyser.getByteFrequencyData(dataArray);
+        var nyquist = audioCtx.sampleRate / 2;
+        var binSize = nyquist / dataArray.length;
+        var lowBin = Math.floor(85 / binSize);
+        var highBin = Math.min(Math.ceil(4000 / binSize), dataArray.length - 1);
+        var sum = 0;
+        var count = 0;
+        for (var i = lowBin; i <= highBin; i++) {
+          sum += dataArray[i];
+          count++;
+        }
+        return count > 0 ? (sum / count) : 0;
+      }
+
       function analyzeAudioLoop() {
         if (!consultationStarted) {
           requestAnimationFrame(analyzeAudioLoop);
@@ -339,17 +363,20 @@
         }
 
         if (analyser && dataArray) {
-          analyser.getByteFrequencyData(dataArray);
-          
-          var sum = 0;
-          for (var i = 2; i < dataArray.length / 2; i++) {
-            sum += dataArray[i];
-          }
-          var average = sum / (dataArray.length / 2);
+          var now = performance.now();
+          if (now - lastAnalysisTime >= (1000 / SAMPLE_RATE_HZ)) {
+            lastAnalysisTime = now;
+            var voiceLevel = analyzeVoiceBand();
 
-          if (average > 15) {
-            startTalking();
-            scheduleSilenceCheck();
+            if (voiceLevel > VOICE_THRESHOLD) {
+              onsetCount++;
+              if (onsetCount >= VOICE_ONSET_FRAMES) {
+                if (!isTalking) startTalking();
+                scheduleSilenceCheck();
+              }
+            } else {
+              onsetCount = 0;
+            }
           }
         }
 
@@ -358,6 +385,8 @@
 
       function hookStream(stream) {
         if (!stream || hookedStreams.has(stream)) return;
+        var audioTracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
+        if (audioTracks.length === 0) return;
         hookedStreams.add(stream);
         
         var ctx = ensureAudioContext();
@@ -366,6 +395,7 @@
         try {
           var source = ctx.createMediaStreamSource(stream);
           source.connect(analyser);
+          connectedSources.push(source);
         } catch (e) {
           console.error("Erro ao conectar stream ao analisador:", e);
         }
@@ -374,25 +404,12 @@
       function scanForAudioTracks() {
         if (!consultationStarted) return;
 
-        // Procura especificamente por tags de áudio do LiveKit
-        var audios = document.querySelectorAll('audio');
-        for (var i = 0; i < audios.length; i++) {
-          var a = audios[i];
-          if (a.srcObject instanceof MediaStream) {
-            hookStream(a.srcObject);
-          }
-        }
-
-        // Fallback para tags de vídeo (LiveKit às vezes cria vídeos ocultos para áudio)
-        var vids = document.querySelectorAll('video');
-        for (var i = 0; i < vids.length; i++) {
-          var v = vids[i];
-          if (v === videoIdle || v === videoTalk) continue;
-          if (v.srcObject instanceof MediaStream) {
-            var audioTracks = v.srcObject.getAudioTracks();
-            if (audioTracks.length > 0) {
-              hookStream(new MediaStream(audioTracks));
-            }
+        var allEls = deepQueryAll(document, 'audio, video');
+        for (var i = 0; i < allEls.length; i++) {
+          var el = allEls[i];
+          if (el === video) continue;
+          if (el.srcObject instanceof MediaStream) {
+            hookStream(el.srcObject);
           }
         }
       }
@@ -614,7 +631,7 @@
       setInterval(function () {
         if (document.body.classList.contains('video-active')) hookHangupButtons();
         scanForAudioTracks();
-      }, 300);
+      }, 200);
 
       window.addEventListener('resize', function () {
         if (launcherEl && document.body.contains(launcherEl)) placeOverActiveSlot(launcherEl);
