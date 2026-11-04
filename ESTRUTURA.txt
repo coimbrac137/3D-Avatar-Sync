@@ -1,0 +1,5 @@
+3D-Avatar-Sync/
+│
+├── index.html
+├── avatar.vrm
+└── README.md 

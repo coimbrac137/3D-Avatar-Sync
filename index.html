@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Auto Texturizer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #1a1a1a; color: #eee; }
+  #canvas-container { position: absolute; inset: 0; }
+  #ui {
+    position: absolute; top: 12px; left: 12px;
+    background: rgba(30,30,30,0.92); border: 1px solid #444; border-radius: 10px;
+    padding: 14px; width: 300px; max-height: calc(100vh - 24px); overflow-y: auto;
+    backdrop-filter: blur(6px); font-size: 13px; z-index: 10;
+  }
+  #ui h2 { font-size: 14px; margin-bottom: 10px; color: #fff; letter-spacing: 0.5px; }
+  #ui h3 { font-size: 12px; margin: 12px 0 6px; color: #9fd; text-transform: uppercase; letter-spacing: 0.8px; }
+  .row { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
+  button {
+    flex: 1; padding: 7px 8px; background: #2d2d2d; color: #eee;
+    border: 1px solid #555; border-radius: 6px; cursor: pointer; font-size: 12px;
+    transition: all 0.15s;
+  }
+  button:hover { background: #3a3a3a; border-color: #777; }
+  button.active { background: #4a7; border-color: #5c9; color: #000; font-weight: 600; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .preset-btn {
+    padding: 8px 6px; text-align: center; font-size: 11px;
+    display: flex; align-items: center; gap: 6px; justify-content: flex-start;
+  }
+  .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #666; flex-shrink: 0; }
+  #color-input-wrap { display: flex; gap: 6px; margin-bottom: 8px; }
+  #color-input { flex: 1; height: 34px; border: 1px solid #555; border-radius: 6px; background: #2d2d2d; cursor: pointer; padding: 2px; }
+  #apply-color-btn { flex: 1; }
+  #info { font-size: 11px; color: #888; margin-top: 8px; line-height: 1.5; }
+  #status { font-size: 11px; color: #f90; margin-top: 8px; min-height: 14px; }
+  #file-input, #image-input { display: none; }
+  .hr { height: 1px; background: #444; margin: 10px 0; }
+  #image-preview {
+    display: none; width: 100%; max-height: 120px; object-fit: contain;
+    border: 1px solid #555; border-radius: 6px; margin-top: 6px; background: #000;
+  }
+  .log { font-size: 10px; color: #7c9; font-family: monospace; margin-top: 4px; max-height: 80px; overflow-y: auto; }
+  .log div { padding: 1px 0; }
+  input[type="range"] { flex: 1; }
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+
+<div id="ui">
+  <h2>🎨 3D Auto Texturizer</h2>
+
+  <div class="row">
+    <button id="load-btn">Carregar GLB</button>
+    <button id="export-btn" disabled>Exportar</button>
+  </div>
+
+  <div class="row">
+    <button id="undo-btn" disabled>↶ Desfazer</button>
+    <button id="reset-btn" disabled>↺ Resetar</button>
+  </div>
+
+  <div class="hr"></div>
+
+  <h3>Auto-Colorir por Imagem</h3>
+  <div class="row">
+    <button id="image-btn">Subir Imagem de Referência</button>
+  </div>
+  <img id="image-preview" alt="preview">
+  
+  <h3 style="margin-top: 10px;">Mapeamento de Regiões</h3>
+  <div style="font-size:10px; color:#aaa; margin-bottom:4px;">Ajuste os limites de altura (Y) para alinhar o modelo</div>
+  <div style="font-size:10px; color:#ccc;">Cabelo:</div>
+  <input type="range" id="y-hair" min="0.5" max="1.0" step="0.01" value="0.88">
+  <div style="font-size:10px; color:#ccc;">Rosto:</div>
+  <input type="range" id="y-face" min="0.5" max="1.0" step="0.01" value="0.70">
+  <div style="font-size:10px; color:#ccc;">Tronco:</div>
+  <input type="range" id="y-shirt" min="0.3" max="0.9" step="0.01" value="0.45">
+  
+  <div class="row" style="margin-top:8px;">
+    <button id="apply-image-btn" disabled>🎯 Auto-Colorir</button>
+  </div>
+  <div class="log" id="auto-log"></div>
+
+  <div class="hr"></div>
+
+  <h3>Modo de Seleção</h3>
+  <div class="row">
+    <button id="mode-mesh" class="active">Mesh Inteira</button>
+    <button id="mode-region">Região (Brush)</button>
+  </div>
+
+  <h3>Paleta de Cores</h3>
+  <div class="preset-grid" id="preset-grid"></div>
+
+  <div class="hr"></div>
+
+  <h3>Cor Personalizada</h3>
+  <div id="color-input-wrap">
+    <input type="color" id="color-input" value="#c89b7b">
+    <button id="apply-color-btn">Aplicar</button>
+  </div>
+
+  <div class="hr"></div>
+
+  <h3>Visualização</h3>
+  <div class="row">
+    <button id="toggle-original">Ver Original</button>
+    <button id="wireframe-btn">Wireframe</button>
+  </div>
+
+  <div id="status">Aguardando modelo...</div>
+  <div id="info"></div>
+</div>
+
+<input type="file" id="file-input" accept=".glb,.gltf">
+<input type="file" id="image-input" accept="image/*">
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+// ============ SCENE ============
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a1a);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 1000);
+camera.position.set(0, 1.2, 3);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(0, 1, 0);
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0x333344, 1.2);
+scene.add(hemi);
+const dir = new THREE.DirectionalLight(0xffffff, 1.5);
+dir.position.set(3, 5, 4); scene.add(dir);
+const dir2 = new THREE.DirectionalLight(0xffffff, 0.5);
+dir2.position.set(-3, 2, -3); scene.add(dir2);
+const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+scene.add(ambient);
+
+const grid = new THREE.GridHelper(10, 20, 0x444444, 0x2a2a2a);
+scene.add(grid);
+
+// ============ STATE ============
+let modelRoot = null;
+let mainMesh = null;
+let originalGeometry = null;
+let colorAttr = null;
+let history = [];
+let currentMode = 'mesh';
+let showingOriginal = false;
+let wireframe = false;
+let isPainting = false;
+let brushRadius = 0.15;
+let raycaster = new THREE.Raycaster();
+let pointer = new THREE.Vector2();
+let brushHelper = null;
+let referenceImage = null;
+let regions = null;
+
+// Parâmetros de altura ajustáveis pelo usuário
+const yLimits = {
+  hair: 0.88,
+  face: 0.70,
+  shirt: 0.45
+};
+
+const PRESETS = [
+  { name: 'Pele',    color: '#c89b7b' },
+  { name: 'Cabelo',  color: '#8a8a8a' },
+  { name: 'Bigode',  color: '#8a8a8a' },
+  { name: 'Jaqueta', color: '#4a2e1b' },
+  { name: 'Camisa',  color: '#e8dcc0' },
+  { name: 'Xadrez',  color: '#8b6f47' },
+  { name: 'Olhos',   color: '#5c3a1e' },
+  { name: 'Boca',    color: '#a0522d' },
+];
+
+// ============ UI BUILD ============
+const presetGrid = document.getElementById('preset-grid');
+PRESETS.forEach(p => {
+  const b = document.createElement('button');
+  b.className = 'preset-btn';
+  b.innerHTML = `<span class="swatch" style="background:${p.color}"></span>${p.name}`;
+  b.addEventListener('click', () => applyColorToSelection(p.color));
+  presetGrid.appendChild(b);
+});
+
+// Controles de limite Y
+document.getElementById('y-hair').addEventListener('input', (e) => {
+  yLimits.hair = parseFloat(e.target.value);
+  if (mainMesh) { detectRegions(); autoColorFromImage(referenceImage); }
+});
+document.getElementById('y-face').addEventListener('input', (e) => {
+  yLimits.face = parseFloat(e.target.value);
+  if (mainMesh) { detectRegions(); autoColorFromImage(referenceImage); }
+});
+document.getElementById('y-shirt').addEventListener('input', (e) => {
+  yLimits.shirt = parseFloat(e.target.value);
+  if (mainMesh) { detectRegions(); autoColorFromImage(referenceImage); }
+});
+
+// ============ LOAD ============
+const loader = new GLTFLoader();
+
+document.getElementById('load-btn').addEventListener('click', () => {
+  document.getElementById('file-input').click();
+});
+document.getElementById('file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) loadFromFile(file);
+});
+
+fetch('My 3D Model.glb', { method: 'HEAD' })
+  .then(r => { if (r.ok) loader.load('My 3D Model.glb', onModelLoaded, undefined, () => {
+    setStatus('Use "Carregar GLB".', '#f90');
+  }); })
+  .catch(() => setStatus('Carregue o arquivo GLB manualmente.', '#f90'));
+
+function loadFromFile(file) {
+  setStatus('Carregando...', '#f90');
+  const url = URL.createObjectURL(file);
+  loader.load(url, (gltf) => { URL.revokeObjectURL(url); onModelLoaded(gltf); },
+    undefined,
+    (err) => { setStatus('Erro ao carregar GLB.', '#f66'); console.error(err); });
+}
+
+// ============ MODEL HANDLING ============
+function onModelLoaded(gltf) {
+  if (modelRoot) scene.remove(modelRoot);
+  modelRoot = gltf.scene;
+
+  let biggest = null; let biggestCount = 0;
+  modelRoot.traverse(o => {
+    if (o.isMesh) {
+      const cnt = o.geometry.attributes.position.count;
+      if (cnt > biggestCount) { biggestCount = cnt; biggest = o; }
+    }
+  });
+
+  mainMesh = biggest;
+  if (!mainMesh) { setStatus('Nenhuma malha encontrada.', '#f66'); return; }
+
+  const box = new THREE.Box3().setFromObject(modelRoot);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const scale = 2 / maxDim;
+
+  modelRoot.position.sub(center);
+  modelRoot.scale.setScalar(scale);
+  const b2 = new THREE.Box3().setFromObject(modelRoot);
+  modelRoot.position.y -= b2.min.y;
+
+  scene.add(modelRoot);
+
+  controls.target.set(0, 1, 0);
+  camera.position.set(0, 1.5, 3);
+  controls.update();
+
+  prepareMeshForVertexColor();
+  detectRegions();
+
+  const geom = mainMesh.geometry;
+  document.getElementById('info').textContent =
+    `Vértices: ${geom.attributes.position.count} | ` +
+    `Faces: ${geom.index ? geom.index.count/3 : geom.attributes.position.count/3}`;
+
+  document.getElementById('export-btn').disabled = false;
+  document.getElementById('reset-btn').disabled = false;
+  document.getElementById('toggle-original').disabled = false;
+  document.getElementById('wireframe-btn').disabled = false;
+
+  setStatus('Modelo carregado.', '#9fd');
+}
+
+function prepareMeshForVertexColor() {
+  const geom = mainMesh.geometry;
+  originalGeometry = geom.clone();
+
+  const pos = geom.attributes.position;
+  const count = pos.count;
+  const colors = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    colors[i*3] = 0.7; colors[i*3+1] = 0.7; colors[i*3+2] = 0.7;
+  }
+  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  colorAttr = geom.attributes.color;
+  colorAttr.needsUpdate = true;
+
+  if (!mainMesh.material || Array.isArray(mainMesh.material)) {
+    mainMesh.material = new THREE.MeshStandardMaterial();
+  }
+  const mat = mainMesh.material;
+  mat.vertexColors = true;
+  mat.color.set(0xffffff);
+  mat.roughness = 0.75;
+  mat.metalness = 0.05;
+  mat.side = THREE.FrontSide;
+  mat.needsUpdate = true;
+  wireframe = false;
+  mat.wireframe = false;
+}
+
+// ============ DETECÇÃO E CLASSIFICAÇÃO ============
+function detectRegions() {
+  const geom = mainMesh.geometry;
+  geom.computeBoundingBox();
+  const bbox = geom.boundingBox;
+  
+  regions = {
+    bbox: { min: bbox.min.clone(), max: bbox.max.clone(), size: new THREE.Vector3().subVectors(bbox.max, bbox.min) },
+  };
+}
+
+function classifyVertex(nx, ny, nz) {
+  // nx: -0.5 (esquerda) a 0.5 (direita)
+  // ny: 0.0 (pés) a 1.0 (topo da cabeça)
+  // nz: -0.5 (fundo) a 0.5 (frente)
+
+  const absX = Math.abs(nx);
+
+  // 1. Cabelo
+  if (ny >= yLimits.hair) return 'hair';
+
+  // 2. Rosto
+  if (ny >= yLimits.face && ny < yLimits.hair) {
+    // Olhos: faixa superior central frontal
+    if (ny >= yLimits.face + (yLimits.hair - yLimits.face) * 0.6 && ny < yLimits.face + (yLimits.hair - yLimits.face) * 0.8 && absX < 0.15 && nz > 0.05) return 'eyes';
+    // Bigode: faixa inferior central frontal
+    if (ny >= yLimits.face + (yLimits.hair - yLimits.face) * 0.3 && ny < yLimits.face + (yLimits.hair - yLimits.face) * 0.5 && absX < 0.12 && nz > 0.1) return 'mustache';
+    // Boca: abaixo do bigode
+    if (ny >= yLimits.face + (yLimits.hair - yLimits.face) * 0.1 && ny < yLimits.face + (yLimits.hair - yLimits.face) * 0.3 && absX < 0.08 && nz > 0.1) return 'mouth';
+    // Face (pele)
+    return 'face';
+  }
+
+  // 3. Pescoço
+  if (ny >= yLimits.shirt && ny < yLimits.face) return 'neck';
+
+  // 4. Tronco (Jaqueta / Camisa)
+  if (ny >= yLimits.shirt && ny < yLimits.face) {
+    // Camisa: centro frontal
+    if (absX < 0.12 && nz > 0.1) return 'shirt';
+    // Jaqueta: resto
+    return 'jacket';
+  }
+
+  // 5. Pernas e sapatos
+  if (ny < yLimits.shirt) {
+    if (ny < 0.1) return 'shoes';
+    return 'pants';
+  }
+
+  return 'face';
+}
+
+// ============ IMAGE TEXTURING ============
+document.getElementById('image-btn').addEventListener('click', () => {
+  document.getElementById('image-input').click();
+});
+document.getElementById('image-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width; canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    referenceImage = { canvas, ctx, width: canvas.width, height: canvas.height, data };
+    const preview = document.getElementById('image-preview');
+    preview.src = img.src;
+    preview.style.display = 'block';
+    document.getElementById('apply-image-btn').disabled = false;
+    setStatus('Imagem carregada.', '#9fd');
+  };
+  img.src = URL.createObjectURL(file);
+});
+
+document.getElementById('apply-image-btn').addEventListener('click', () => {
+  if (!mainMesh) { setStatus('Carregue um modelo primeiro.', '#f66'); return; }
+  pushHistory();
+  if (referenceImage) {
+    autoColorFromImage(referenceImage);
+    setStatus('Auto-colorido com sucesso.', '#9fd');
+  } else {
+    autoColorDefault();
+    setStatus('Auto-colorido com paleta padrão.', '#9fd');
+  }
+});
+
+function srgbToLinear(c) {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+// Amostragem inteligente baseada na estrutura de cores da imagem de referência.
+function autoColorFromImage(img) {
+  if (!img) return;
+  
+  const geom = mainMesh.geometry;
+  const pos = geom.attributes.position;
+  const arr = colorAttr.array;
+  const { bbox } = regions;
+  const bmin = bbox.min, bsize = bbox.size;
+
+  const v = new THREE.Vector3();
+  
+  const imgW = img.width, imgH = img.height;
+  const pix = img.data.data;
+  
+  function sampleRect(x1, y1, x2, y2) {
+    let r=0, g=0, b=0, count=0;
+    const px1 = Math.floor(x1 * imgW), px2 = Math.floor(x2 * imgW);
+    const py1 = Math.floor(y1 * imgH), py2 = Math.floor(y2 * imgH);
+    for(let y = py1; y < py2; y++) {
+      for(let x = px1; x < px2; x++) {
+        const idx = (y * imgW + x) * 4;
+        r += pix[idx]; g += pix[idx+1]; b += pix[idx+2];
+        count++;
+      }
+    }
+    if (count === 0) return {r: 0.5, g: 0.5, b: 0.5};
+    return { r: (r/count)/255, g: (g/count)/255, b: (b/count)/255 };
+  }
+
+  // Extraindo cores de regiões específicas da imagem (baseado em uma foto de busto)
+  const cHair = sampleRect(0.3, 0.05, 0.7, 0.15);
+  const cFace = sampleRect(0.3, 0.4, 0.7, 0.5);
+  const cEyes = sampleRect(0.4, 0.32, 0.6, 0.36); // Olhos mais ou menos aqui
+  const cMustache = sampleRect(0.42, 0.48, 0.58, 0.52);
+  const cShirt = sampleRect(0.42, 0.7, 0.58, 0.8);
+  const cJacket = sampleRect(0.1, 0.7, 0.25, 0.8);
+
+  const finalColors = {
+    hair: cHair, face: cFace, eyes: cEyes, mustache: cMustache, 
+    mouth: cFace, neck: cFace, shirt: cShirt, jacket: cJacket,
+    pants: {r: 0.2, g: 0.2, b: 0.2}, shoes: {r: 0.1, g: 0.1, b: 0.1}
+  };
+
+  let counts = {};
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const nx = (v.x - bmin.x) / (bsize.x || 1) - 0.5;
+    const ny = (v.y - bmin.y) / (bsize.y || 1);
+    const nz = ((v.z - bmin.z) / (bsize.z || 1)) - 0.5;
+
+    const region = classifyVertex(nx, ny, nz);
+    counts[region] = (counts[region] || 0) + 1;
+
+    const c = finalColors[region] || { r: 0.7, g: 0.7, b: 0.7 };
+
+    arr[i*3]   = srgbToLinear(c.r);
+    arr[i*3+1] = srgbToLinear(c.g);
+    arr[i*3+2] = srgbToLinear(c.b);
+  }
+
+  colorAttr.needsUpdate = true;
+
+  const logEl = document.getElementById('auto-log');
+  logEl.innerHTML = '';
+  const labels = { hair:'Cabelo', face:'Rosto', eyes:'Olhos', mustache:'Bigode',
+                   mouth:'Boca', neck:'Pescoço', shirt:'Camisa', jacket:'Jaqueta',
+                   pants:'Calça', shoes:'Sapato' };
+  for (const k in counts) {
+    if (counts[k] > 0) {
+      const d = document.createElement('div');
+      d.textContent = `✓ ${labels[k] || k}: ${counts[k]} vértices`;
+      logEl.appendChild(d);
+    }
+  }
+}
+
+function autoColorDefault() {
+  const geom = mainMesh.geometry;
+  const pos = geom.attributes.position;
+  const arr = colorAttr.array;
+  const { bbox } = regions;
+  const bmin = bbox.min, bsize = bbox.size;
+
+  const baseColors = {
+    hair:    '#8a8a8a', face:    '#c89b7b', eyes:    '#5c3a1e',
+    mustache:'#8a8a8a', mouth:   '#a0522d', neck:    '#c89b7b',
+    shirt:   '#e8dcc0', jacket:  '#4a2e1b', pants:   '#333333', shoes: '#1a1a1a',
+  };
+  const lin = {};
+  for (const k in baseColors) {
+    const c = new THREE.Color(baseColors[k]);
+    lin[k] = [c.r, c.g, c.b];
+  }
+
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const nx = (v.x - bmin.x) / (bsize.x || 1) - 0.5;
+    const ny = (v.y - bmin.y) / (bsize.y || 1);
+    const nz = ((v.z - bmin.z) / (bsize.z || 1)) - 0.5;
+    const region = classifyVertex(nx, ny, nz);
+    const c = lin[region] || lin.face;
+    arr[i*3] = c[0]; arr[i*3+1] = c[1]; arr[i*3+2] = c[2];
+  }
+  colorAttr.needsUpdate = true;
+}
+
+// ============ COLORING (Manual) ============
+function applyColorToSelection(hexColor) {
+  if (!mainMesh) return;
+  if (currentMode === 'mesh') {
+    pushHistory();
+    setAllVerticesColor(hexColor);
+  } else {
+    setStatus('Modo Região: clique e arraste no modelo para pintar.', '#9fd');
+  }
+}
+
+function setAllVerticesColor(hexColor) {
+  const c = new THREE.Color(hexColor);
+  const arr = colorAttr.array;
+  for (let i = 0; i < arr.length; i += 3) {
+    arr[i] = c.r; arr[i+1] = c.g; arr[i+2] = c.b;
+  }
+  colorAttr.needsUpdate = true;
+}
+
+function paintVerticesAt(worldPoint, hexColor, radius) {
+  const geom = mainMesh.geometry;
+  const pos = geom.attributes.position;
+  const c = new THREE.Color(hexColor);
+  const arr = colorAttr.array;
+  const localPoint = mainMesh.worldToLocal(worldPoint.clone());
+  const r2 = radius * radius;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const dx = v.x - localPoint.x, dy = v.y - localPoint.y, dz = v.z - localPoint.z;
+    if (dx*dx + dy*dy + dz*dz <= r2) {
+      arr[i*3] = c.r; arr[i*3+1] = c.g; arr[i*3+2] = c.b;
+    }
+  }
+  colorAttr.needsUpdate = true;
+}
+
+// ============ HISTORY ============
+function pushHistory() {
+  if (!colorAttr) return;
+  history.push(new Float32Array(colorAttr.array));
+  if (history.length > 50) history.shift();
+  document.getElementById('undo-btn').disabled = false;
+}
+function undo() {
+  if (history.length === 0 || !colorAttr) return;
+  const prev = history.pop();
+  colorAttr.array.set(prev);
+  colorAttr.needsUpdate = true;
+  document.getElementById('undo-btn').disabled = history.length === 0;
+}
+function resetModel() {
+  if (!mainMesh || !originalGeometry) return;
+  pushHistory();
+  const arr = colorAttr.array;
+  for (let i = 0; i < arr.length; i += 3) {
+    arr[i] = 0.7; arr[i+1] = 0.7; arr[i+2] = 0.7;
+  }
+  colorAttr.needsUpdate = true;
+  showingOriginal = false;
+  document.getElementById('toggle-original').textContent = 'Ver Original';
+}
+
+// ============ EXPORT ============
+async function exportGLB() {
+  if (!modelRoot) return;
+  setStatus('Exportando...', '#f90');
+  const clone = modelRoot.clone(true);
+  clone.traverse(o => {
+    if (o.isMesh) {
+      if (!o.material.vertexColors) {
+        o.material = o.material.clone();
+        o.material.vertexColors = true;
+        o.material.color.set(0xffffff);
+        o.material.needsUpdate = true;
+      }
+    }
+  });
+  const exporter = new GLTFExporter();
+  try {
+    const result = await exporter.parseAsync(clone, { binary: true });
+    const blob = new Blob([result], { type: 'model/gltf-binary' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'My 3D Model - Texturized.glb';
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('Exportado com sucesso.', '#9fd');
+  } catch (err) {
+    console.error(err);
+    setStatus('Erro ao exportar.', '#f66');
+  }
+}
+
+// ============ UI EVENTS ============
+document.getElementById('export-btn').addEventListener('click', exportGLB);
+document.getElementById('undo-btn').addEventListener('click', undo);
+document.getElementById('reset-btn').addEventListener('click', resetModel);
+
+document.getElementById('apply-color-btn').addEventListener('click', () => {
+  const hex = document.getElementById('color-input').value;
+  if (currentMode === 'mesh') applyColorToSelection(hex);
+  else setStatus('Modo Região: clique e arraste no modelo para pintar.', '#9fd');
+});
+
+document.getElementById('mode-mesh').addEventListener('click', () => {
+  currentMode = 'mesh';
+  document.getElementById('mode-mesh').classList.add('active');
+  document.getElementById('mode-region').classList.remove('active');
+  setStatus('Modo: Mesh inteira.', '#9fd');
+});
+document.getElementById('mode-region').addEventListener('click', () => {
+  currentMode = 'region';
+  document.getElementById('mode-region').classList.add('active');
+  document.getElementById('mode-mesh').classList.remove('active');
+  setStatus('Modo: Região. Clique e arraste para pintar.', '#9fd');
+});
+
+document.getElementById('toggle-original').addEventListener('click', () => {
+  if (!mainMesh) return;
+  showingOriginal = !showingOriginal;
+  if (showingOriginal) {
+    if (!mainMesh.userData.savedColors) {
+      mainMesh.userData.savedColors = new Float32Array(colorAttr.array);
+    }
+    const arr = colorAttr.array;
+    for (let i = 0; i < arr.length; i += 3) { arr[i]=0.7; arr[i+1]=0.7; arr[i+2]=0.7; }
+    colorAttr.needsUpdate = true;
+    document.getElementById('toggle-original').textContent = 'Ver Colorido';
+  } else {
+    if (mainMesh.userData.savedColors) {
+      colorAttr.array.set(mainMesh.userData.savedColors);
+      colorAttr.needsUpdate = true;
+    }
+    document.getElementById('toggle-original').textContent = 'Ver Original';
+  }
+});
+
+document.getElementById('wireframe-btn').addEventListener('click', () => {
+  if (!mainMesh) return;
+  wireframe = !wireframe;
+  mainMesh.material.wireframe = wireframe;
+  mainMesh.material.needsUpdate = true;
+  document.getElementById('wireframe-btn').classList.toggle('active', wireframe);
+});
+
+// ============ PAINTING ============
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  if (currentMode !== 'region' || !mainMesh) return;
+  isPainting = true;
+  controls.enabled = false;
+  pushHistory();
+  paintAtPointer(e);
+});
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (currentMode === 'region' && mainMesh) updateBrushHelper(e);
+  if (isPainting) paintAtPointer(e);
+});
+renderer.domElement.addEventListener('pointerup', () => {
+  if (isPainting) { isPainting = false; controls.enabled = true; }
+});
+renderer.domElement.addEventListener('pointerleave', () => {
+  if (isPainting) { isPainting = false; controls.enabled = true; }
+});
+
+function getPointer(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+}
+function paintAtPointer(e) {
+  getPointer(e);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObject(mainMesh, false);
+  if (hits.length > 0) {
+    const hex = document.getElementById('color-input').value;
+    const worldRadius = brushRadius * (mainMesh.parent ? mainMesh.parent.scale.x : 1);
+    paintVerticesAt(hits[0].point, hex, worldRadius);
+  }
+}
+function updateBrushHelper(e) {
+  getPointer(e);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObject(mainMesh, false);
+  if (hits.length > 0) {
+    if (!brushHelper) {
+      brushHelper = new THREE.Mesh(
+        new THREE.SphereGeometry(1, 16, 12),
+        new THREE.MeshBasicMaterial({ color: 0x00ffaa, wireframe: true, transparent: true, opacity: 0.5 })
+      );
+      scene.add(brushHelper);
+    }
+    brushHelper.visible = true;
+    brushHelper.position.copy(hits[0].point);
+    const s = brushRadius * (mainMesh.parent ? mainMesh.parent.scale.x : 1);
+    brushHelper.scale.setScalar(s);
+  } else if (brushHelper) brushHelper.visible = false;
+}
+
+// ============ RESIZE & LOOP ============
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+function setStatus(msg, color) {
+  const s = document.getElementById('status');
+  s.textContent = msg;
+  s.style.color = color || '#f90';
+}
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
