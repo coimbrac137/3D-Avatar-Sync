@@ -2,749 +2,664 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Auto Texturizer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Avatar com Sincronização de Voz IA</title>
+<meta name="google" content="notranslate">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', sans-serif; overflow: hidden; background: #1a1a1a; color: #eee; }
-  #canvas-container { position: absolute; inset: 0; }
-  #ui {
-    position: absolute; top: 12px; left: 12px;
-    background: rgba(30,30,30,0.92); border: 1px solid #444; border-radius: 10px;
-    padding: 14px; width: 300px; max-height: calc(100vh - 24px); overflow-y: auto;
-    backdrop-filter: blur(6px); font-size: 13px; z-index: 10;
+  body { font-family: 'Inter', Arial, sans-serif; background: #ffffff; color: #000; -webkit-font-smoothing: antialiased; }
+  .page-header { background: #000; color: #fff; position: relative; height: 95px; display: flex; align-items: center; }
+  .back-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; text-decoration: none; height: 100%; }
+  .back-btn img { height: 65px; width: auto; display: block; padding-left: 15px; }
+
+  .header-agent-slot {
+    position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
+    width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
+    background: #111; pointer-events: none;
   }
-  #ui h2 { font-size: 14px; margin-bottom: 10px; color: #fff; letter-spacing: 0.5px; }
-  #ui h3 { font-size: 12px; margin: 12px 0 6px; color: #9fd; text-transform: uppercase; letter-spacing: 0.8px; }
-  .row { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; }
-  button {
-    flex: 1; padding: 7px 8px; background: #2d2d2d; color: #eee;
-    border: 1px solid #555; border-radius: 6px; cursor: pointer; font-size: 12px;
-    transition: all 0.15s;
+
+  .auth-section { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 95px); padding: 60px 20px; background: #ffffff; transition: filter 0.3s; }
+  .auth-box { background: #ffffff; width: 100%; max-width: 520px; padding: 70px 55px 55px; border: none; border-radius: 24px; }
+  .auth-title { font-family: 'Poppins', sans-serif; font-size: 24px; font-weight: 400; letter-spacing: 1px; text-align: center; color: #000; margin-bottom: 10px; }
+  .auth-sub { font-size: 13px; color: #888; text-align: center; margin-bottom: 38px; letter-spacing: 0.5px; }
+
+  .avatar-card { display: flex; align-items: center; gap: 16px; background: #f5f7fb; border-radius: 14px; padding: 20px; margin-bottom: 24px; }
+  .avatar-thumb { width: 64px; height: 64px; border-radius: 50%; background: #002CF2; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+  .avatar-info h2 { font-family: 'Poppins', sans-serif; font-size: 17px; font-weight: 500; color: #000; margin-bottom: 4px; letter-spacing: 0.3px; }
+  .avatar-info p { font-size: 13px; color: #666; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #16a34a; margin-top: 6px; letter-spacing: 0.5px; }
+  .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .consultation-area { background: #f5f7fb; border-radius: 14px; padding: 30px; text-align: center; margin-bottom: 20px; }
+  .consultation-area p { color: #555; font-size: 14px; margin-bottom: 22px; line-height: 1.6; }
+
+  .agent-error-msg {
+    display: none; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+    border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.5; text-align: left; margin-bottom: 14px;
   }
-  button:hover { background: #3a3a3a; border-color: #777; }
-  button.active { background: #4a7; border-color: #5c9; color: #000; font-weight: 600; }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-  .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .preset-btn {
-    padding: 8px 6px; text-align: center; font-size: 11px;
-    display: flex; align-items: center; gap: 6px; justify-content: flex-start;
+  .agent-error-msg.show { display: block; }
+  .agent-error-msg strong { display: block; font-size: 13px; font-weight: 600; margin-bottom: 2px; color: #991b1b; }
+  .agent-error-msg span { display: block; font-size: 12px; color: #b91c1c; }
+
+  .agent-btn-wrap { position: relative; width: 100%; height: 52px; border-radius: 14px; overflow: visible; }
+  .agent-btn-visual {
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; height: 100%; background: #000; color: #fff; border: none; border-radius: 14px;
+    font-family: 'Inter', Arial, sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; position: relative; z-index: 1;
   }
-  .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid #666; flex-shrink: 0; }
-  #color-input-wrap { display: flex; gap: 6px; margin-bottom: 8px; }
-  #color-input { flex: 1; height: 34px; border: 1px solid #555; border-radius: 6px; background: #2d2d2d; cursor: pointer; padding: 2px; }
-  #apply-color-btn { flex: 1; }
-  #info { font-size: 11px; color: #888; margin-top: 8px; line-height: 1.5; }
-  #status { font-size: 11px; color: #f90; margin-top: 8px; min-height: 14px; }
-  #file-input, #image-input { display: none; }
-  .hr { height: 1px; background: #444; margin: 10px 0; }
-  #image-preview {
-    display: none; width: 100%; max-height: 120px; object-fit: contain;
-    border: 1px solid #555; border-radius: 6px; margin-top: 6px; background: #000;
+  .agent-btn-visual span { position: relative; z-index: 2; }
+
+  .agent-slot {
+    position: absolute; top: 50%; left: 18px; transform: translateY(-50%);
+    width: 28px; height: 28px; z-index: 2; pointer-events: none;
   }
-  .log { font-size: 10px; color: #7c9; font-family: monospace; margin-top: 4px; max-height: 80px; overflow-y: auto; }
-  .log div { padding: 1px 0; }
-  input[type="range"] { flex: 1; }
+
+  body.video-active .page-header,
+  body.video-active .auth-section { filter: blur(8px); pointer-events: none; user-select: none; }
+
+  .video-stage {
+    display: none; position: fixed; inset: 0; z-index: 10000;
+    background: transparent; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .video-stage.active { display: flex; }
+  .video-box {
+    position: relative; width: 66vw; height: 66vh; max-width: 1080px; max-height: 740px;
+    display: flex; flex-direction: column;
+  }
+  
+  .video-stack {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  
+  .video-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    transition: opacity 0.4s ease-in-out;
+    will-change: opacity;
+  }
+  
+  #video-idle { opacity: 1; z-index: 1; }
+  #video-talk { opacity: 0; z-index: 2; }
+
+  .video-bottom-bar {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    background: #000; border-radius: 0 0 20px 20px; padding: 12px 18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6); position: relative;
+    min-height: 68px; flex-shrink: 0;
+  }
+
+  .video-start-wrap {
+    display: inline-flex; align-items: center; gap: 12px;
+    cursor: pointer; user-select: none; position: relative;
+  }
+
+  .video-agent-slot {
+    width: 44px; height: 44px; flex-shrink: 0; pointer-events: auto;
+    border-radius: 50%; overflow: hidden; background: #111; position: relative;
+  }
+
+  .video-start-text {
+    color: #ffffff; font-family: 'Inter', Arial, sans-serif; font-size: 13px;
+    font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap;
+  }
+  .video-start-wrap:hover .video-start-text { color: #cccccc; }
+
+  @media (min-width: 1441px) { .auth-box { max-width: 560px; padding: 80px 65px 65px; } .auth-title { font-size: 26px; } .auth-sub { font-size: 14px; } }
+  @media (min-width: 1025px) and (max-width: 1440px) { .auth-box { max-width: 540px; padding: 75px 60px 60px; } }
+  @media (min-width: 769px) and (max-width: 1024px) { .auth-box { max-width: 500px; padding: 60px 50px 50px; } }
+  @media (max-width: 768px) {
+    .auth-section { padding: 40px 18px; }
+    .auth-box { max-width: 520px; padding: 55px 40px 45px; }
+    .video-box { width: 94vw; height: 72vh; height: 72dvh; max-width: none; max-height: none; }
+  }
+  @media (max-width: 480px) {
+    .page-header { height: 65px; } .back-btn img { height: 38px; padding-left: 10px; }
+    .auth-section { padding: 30px 16px; } .auth-box { padding: 45px 28px 38px; max-width: 100%; border-radius: 20px; }
+    .auth-title { font-size: 22px; } .auth-sub { font-size: 12px; margin-bottom: 30px; }
+    .avatar-card { padding: 16px; } .avatar-thumb { width: 54px; height: 54px; font-size: 24px; }
+    .header-agent-slot { width: 36px; height: 36px; right: 12px; }
+    .video-box { width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; }
+    .video-stack { border-radius: 0; box-shadow: none; }
+    .video-bottom-bar { border-radius: 0; box-shadow: none; padding: 12px 18px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); min-height: 72px; }
+    .video-agent-slot { width: 48px; height: 48px; }
+    .video-start-text { font-size: 12px; }
+  }
+  @media (max-width: 360px) {
+    .page-header { height: 58px; } .back-btn img { height: 32px; padding-left: 8px; }
+    .auth-section { padding: 24px 12px; } .auth-box { padding: 38px 22px 32px; border-radius: 16px; }
+    .auth-title { font-size: 20px; } .auth-sub { font-size: 11px; margin-bottom: 26px; }
+    .header-agent-slot { width: 32px; height: 32px; right: 10px; }
+  }
+  @media (max-height: 500px) and (orientation: landscape) {
+    .video-box { width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; }
+    .video-stack { border-radius: 0; box-shadow: none; }
+    .video-bottom-bar { border-radius: 0; box-shadow: none; min-height: 56px; padding: 6px 18px; padding-left: calc(18px + env(safe-area-inset-left)); padding-right: calc(18px + env(safe-area-inset-right)); }
+    .video-agent-slot { width: 40px; height: 40px; }
+  }
 </style>
 </head>
 <body>
-<div id="canvas-container"></div>
+  <script>
+    document.querySelectorAll('*').forEach(function(el) { el.setAttribute('translate', 'no'); el.classList.add('notranslate'); });
+  </script>
 
-<div id="ui">
-  <h2>🎨 3D Auto Texturizer</h2>
-
-  <div class="row">
-    <button id="load-btn">Carregar GLB</button>
-    <button id="export-btn" disabled>Exportar</button>
+  <div class="page-header notranslate" translate="no" id="pageHeader">
+    <a href="#" class="back-btn"><img src="logo55.png" alt="Logo"></a>
+    <div class="header-agent-slot" id="headerAgentSlot"></div>
   </div>
 
-  <div class="row">
-    <button id="undo-btn" disabled>↶ Desfazer</button>
-    <button id="reset-btn" disabled>↺ Resetar</button>
+  <section class="auth-section notranslate" translate="no">
+    <div class="auth-box">
+      <h1 class="auth-title notranslate" translate="no">Avatar Inteligente</h1>
+      <p class="auth-sub notranslate" translate="no">Converse por voz com o assistente virtual</p>
+
+      <div class="avatar-card">
+        <div class="avatar-thumb">
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path></svg>
+        </div>
+        <div class="avatar-info">
+          <h2>Assistente Virtual</h2>
+          <p>Avatar com IA</p>
+          <div class="status">Disponível agora</div>
+        </div>
+      </div>
+
+      <div class="consultation-area">
+        <p>Clique no botão abaixo para iniciar a conversa por voz. O avatar se movimentará em tempo real conforme a inteligência artificial falar.</p>
+
+        <div class="agent-error-msg" id="agentErrorMsg">
+          <strong>Could not connect to the agent</strong>
+          <span id="agentErrorDetail">Requested device not found</span>
+        </div>
+
+        <div class="agent-btn-wrap" id="agentBtnWrap">
+          <button type="button" class="agent-btn-visual" id="startConsultBtn">
+            <span>Iniciar Conversa</span>
+          </button>
+          <div class="agent-slot" id="agentSlot"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="video-stage" id="videoStage">
+    <div class="video-box">
+      <div class="video-stack">
+        <video id="video-idle" class="video-layer" src="piscando.mp4" playsinline muted loop></video>
+        <video id="video-talk" class="video-layer" src="falando.mp4" playsinline muted loop></video>
+      </div>
+      <div class="video-bottom-bar">
+        <div class="video-start-wrap" id="videoStartWrap">
+          <div class="video-agent-slot" id="videoAgentSlot"></div>
+          <span class="video-start-text" id="videoStartText">Começar</span>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="hr"></div>
+  <script
+    src="https://cloud.livekit.io/embed-popup.js"
+    data-lk-agent="CA_4wb8jJKVXCDP"
+    data-lk-color="#002CF2"
+  ></script>
 
-  <h3>Auto-Colorir por Imagem</h3>
-  <div class="row">
-    <button id="image-btn">Subir Imagem de Referência</button>
-  </div>
-  <img id="image-preview" alt="preview">
-  
-  <h3 style="margin-top: 10px;">Mapeamento de Regiões</h3>
-  <div style="font-size:10px; color:#aaa; margin-bottom:4px;">Ajuste os limites de altura (Y) para alinhar o modelo</div>
-  <div style="font-size:10px; color:#ccc;">Cabelo:</div>
-  <input type="range" id="y-hair" min="0.5" max="1.0" step="0.01" value="0.88">
-  <div style="font-size:10px; color:#ccc;">Rosto:</div>
-  <input type="range" id="y-face" min="0.5" max="1.0" step="0.01" value="0.70">
-  <div style="font-size:10px; color:#ccc;">Tronco:</div>
-  <input type="range" id="y-shirt" min="0.3" max="0.9" step="0.01" value="0.45">
-  
-  <div class="row" style="margin-top:8px;">
-    <button id="apply-image-btn" disabled>🎯 Auto-Colorir</button>
-  </div>
-  <div class="log" id="auto-log"></div>
+  <script>
+    (function () {
+      var btn = document.getElementById('startConsultBtn');
+      var slot = document.getElementById('agentSlot');
+      var headerAgentSlot = document.getElementById('headerAgentSlot');
+      var videoAgentSlot = document.getElementById('videoAgentSlot');
+      var videoStartWrap = document.getElementById('videoStartWrap');
+      var errorMsg = document.getElementById('agentErrorMsg');
+      var errorDetail = document.getElementById('agentErrorDetail');
+      var videoStage = document.getElementById('videoStage');
+      var videoIdle = document.getElementById('video-idle');
+      var videoTalk = document.getElementById('video-talk');
 
-  <div class="hr"></div>
+      var launcherEl = null;
+      var bgApplied = false;
+      var warmMicStream = null;
+      var consultationStarted = false;
+      var isTalking = false;
+      var silenceTimer = null;
+      
+      var audioCtx = null;
+      var analyser = null;
+      var dataArray = null;
+      var hookedStreams = new WeakSet();
 
-  <h3>Modo de Seleção</h3>
-  <div class="row">
-    <button id="mode-mesh" class="active">Mesh Inteira</button>
-    <button id="mode-region">Região (Brush)</button>
-  </div>
-
-  <h3>Paleta de Cores</h3>
-  <div class="preset-grid" id="preset-grid"></div>
-
-  <div class="hr"></div>
-
-  <h3>Cor Personalizada</h3>
-  <div id="color-input-wrap">
-    <input type="color" id="color-input" value="#c89b7b">
-    <button id="apply-color-btn">Aplicar</button>
-  </div>
-
-  <div class="hr"></div>
-
-  <h3>Visualização</h3>
-  <div class="row">
-    <button id="toggle-original">Ver Original</button>
-    <button id="wireframe-btn">Wireframe</button>
-  </div>
-
-  <div id="status">Aguardando modelo...</div>
-  <div id="info"></div>
-</div>
-
-<input type="file" id="file-input" accept=".glb,.gltf">
-<input type="file" id="image-input" accept="image/*">
-
-<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-  }
-}
-</script>
-
-<script type="module">
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-
-// ============ SCENE ============
-const container = document.getElementById('canvas-container');
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a1a);
-
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.01, 1000);
-camera.position.set(0, 1.2, 3);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-container.appendChild(renderer.domElement);
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.target.set(0, 1, 0);
-
-const hemi = new THREE.HemisphereLight(0xffffff, 0x333344, 1.2);
-scene.add(hemi);
-const dir = new THREE.DirectionalLight(0xffffff, 1.5);
-dir.position.set(3, 5, 4); scene.add(dir);
-const dir2 = new THREE.DirectionalLight(0xffffff, 0.5);
-dir2.position.set(-3, 2, -3); scene.add(dir2);
-const ambient = new THREE.AmbientLight(0xffffff, 0.3);
-scene.add(ambient);
-
-const grid = new THREE.GridHelper(10, 20, 0x444444, 0x2a2a2a);
-scene.add(grid);
-
-// ============ STATE ============
-let modelRoot = null;
-let mainMesh = null;
-let originalGeometry = null;
-let colorAttr = null;
-let history = [];
-let currentMode = 'mesh';
-let showingOriginal = false;
-let wireframe = false;
-let isPainting = false;
-let brushRadius = 0.15;
-let raycaster = new THREE.Raycaster();
-let pointer = new THREE.Vector2();
-let brushHelper = null;
-let referenceImage = null;
-let regions = null;
-
-// Parâmetros de altura ajustáveis pelo usuário
-const yLimits = {
-  hair: 0.88,
-  face: 0.70,
-  shirt: 0.45
-};
-
-const PRESETS = [
-  { name: 'Pele',    color: '#c89b7b' },
-  { name: 'Cabelo',  color: '#8a8a8a' },
-  { name: 'Bigode',  color: '#8a8a8a' },
-  { name: 'Jaqueta', color: '#4a2e1b' },
-  { name: 'Camisa',  color: '#e8dcc0' },
-  { name: 'Xadrez',  color: '#8b6f47' },
-  { name: 'Olhos',   color: '#5c3a1e' },
-  { name: 'Boca',    color: '#a0522d' },
-];
-
-// ============ UI BUILD ============
-const presetGrid = document.getElementById('preset-grid');
-PRESETS.forEach(p => {
-  const b = document.createElement('button');
-  b.className = 'preset-btn';
-  b.innerHTML = `<span class="swatch" style="background:${p.color}"></span>${p.name}`;
-  b.addEventListener('click', () => applyColorToSelection(p.color));
-  presetGrid.appendChild(b);
-});
-
-// Controles de limite Y
-document.getElementById('y-hair').addEventListener('input', (e) => {
-  yLimits.hair = parseFloat(e.target.value);
-  if (mainMesh) { detectRegions(); autoColorFromImage(referenceImage); }
-});
-document.getElementById('y-face').addEventListener('input', (e) => {
-  yLimits.face = parseFloat(e.target.value);
-  if (mainMesh) { detectRegions(); autoColorFromImage(referenceImage); }
-});
-document.getElementById('y-shirt').addEventListener('input', (e) => {
-  yLimits.shirt = parseFloat(e.target.value);
-  if (mainMesh) { detectRegions(); autoColorFromImage(referenceImage); }
-});
-
-// ============ LOAD ============
-const loader = new GLTFLoader();
-
-document.getElementById('load-btn').addEventListener('click', () => {
-  document.getElementById('file-input').click();
-});
-document.getElementById('file-input').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (file) loadFromFile(file);
-});
-
-fetch('My 3D Model.glb', { method: 'HEAD' })
-  .then(r => { if (r.ok) loader.load('My 3D Model.glb', onModelLoaded, undefined, () => {
-    setStatus('Use "Carregar GLB".', '#f90');
-  }); })
-  .catch(() => setStatus('Carregue o arquivo GLB manualmente.', '#f90'));
-
-function loadFromFile(file) {
-  setStatus('Carregando...', '#f90');
-  const url = URL.createObjectURL(file);
-  loader.load(url, (gltf) => { URL.revokeObjectURL(url); onModelLoaded(gltf); },
-    undefined,
-    (err) => { setStatus('Erro ao carregar GLB.', '#f66'); console.error(err); });
-}
-
-// ============ MODEL HANDLING ============
-function onModelLoaded(gltf) {
-  if (modelRoot) scene.remove(modelRoot);
-  modelRoot = gltf.scene;
-
-  let biggest = null; let biggestCount = 0;
-  modelRoot.traverse(o => {
-    if (o.isMesh) {
-      const cnt = o.geometry.attributes.position.count;
-      if (cnt > biggestCount) { biggestCount = cnt; biggest = o; }
-    }
-  });
-
-  mainMesh = biggest;
-  if (!mainMesh) { setStatus('Nenhuma malha encontrada.', '#f66'); return; }
-
-  const box = new THREE.Box3().setFromObject(modelRoot);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  const scale = 2 / maxDim;
-
-  modelRoot.position.sub(center);
-  modelRoot.scale.setScalar(scale);
-  const b2 = new THREE.Box3().setFromObject(modelRoot);
-  modelRoot.position.y -= b2.min.y;
-
-  scene.add(modelRoot);
-
-  controls.target.set(0, 1, 0);
-  camera.position.set(0, 1.5, 3);
-  controls.update();
-
-  prepareMeshForVertexColor();
-  detectRegions();
-
-  const geom = mainMesh.geometry;
-  document.getElementById('info').textContent =
-    `Vértices: ${geom.attributes.position.count} | ` +
-    `Faces: ${geom.index ? geom.index.count/3 : geom.attributes.position.count/3}`;
-
-  document.getElementById('export-btn').disabled = false;
-  document.getElementById('reset-btn').disabled = false;
-  document.getElementById('toggle-original').disabled = false;
-  document.getElementById('wireframe-btn').disabled = false;
-
-  setStatus('Modelo carregado.', '#9fd');
-}
-
-function prepareMeshForVertexColor() {
-  const geom = mainMesh.geometry;
-  originalGeometry = geom.clone();
-
-  const pos = geom.attributes.position;
-  const count = pos.count;
-  const colors = new Float32Array(count * 3);
-  for (let i = 0; i < count; i++) {
-    colors[i*3] = 0.7; colors[i*3+1] = 0.7; colors[i*3+2] = 0.7;
-  }
-  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  colorAttr = geom.attributes.color;
-  colorAttr.needsUpdate = true;
-
-  if (!mainMesh.material || Array.isArray(mainMesh.material)) {
-    mainMesh.material = new THREE.MeshStandardMaterial();
-  }
-  const mat = mainMesh.material;
-  mat.vertexColors = true;
-  mat.color.set(0xffffff);
-  mat.roughness = 0.75;
-  mat.metalness = 0.05;
-  mat.side = THREE.FrontSide;
-  mat.needsUpdate = true;
-  wireframe = false;
-  mat.wireframe = false;
-}
-
-// ============ DETECÇÃO E CLASSIFICAÇÃO ============
-function detectRegions() {
-  const geom = mainMesh.geometry;
-  geom.computeBoundingBox();
-  const bbox = geom.boundingBox;
-  
-  regions = {
-    bbox: { min: bbox.min.clone(), max: bbox.max.clone(), size: new THREE.Vector3().subVectors(bbox.max, bbox.min) },
-  };
-}
-
-function classifyVertex(nx, ny, nz) {
-  // nx: -0.5 (esquerda) a 0.5 (direita)
-  // ny: 0.0 (pés) a 1.0 (topo da cabeça)
-  // nz: -0.5 (fundo) a 0.5 (frente)
-
-  const absX = Math.abs(nx);
-
-  // 1. Cabelo
-  if (ny >= yLimits.hair) return 'hair';
-
-  // 2. Rosto
-  if (ny >= yLimits.face && ny < yLimits.hair) {
-    // Olhos: faixa superior central frontal
-    if (ny >= yLimits.face + (yLimits.hair - yLimits.face) * 0.6 && ny < yLimits.face + (yLimits.hair - yLimits.face) * 0.8 && absX < 0.15 && nz > 0.05) return 'eyes';
-    // Bigode: faixa inferior central frontal
-    if (ny >= yLimits.face + (yLimits.hair - yLimits.face) * 0.3 && ny < yLimits.face + (yLimits.hair - yLimits.face) * 0.5 && absX < 0.12 && nz > 0.1) return 'mustache';
-    // Boca: abaixo do bigode
-    if (ny >= yLimits.face + (yLimits.hair - yLimits.face) * 0.1 && ny < yLimits.face + (yLimits.hair - yLimits.face) * 0.3 && absX < 0.08 && nz > 0.1) return 'mouth';
-    // Face (pele)
-    return 'face';
-  }
-
-  // 3. Pescoço
-  if (ny >= yLimits.shirt && ny < yLimits.face) return 'neck';
-
-  // 4. Tronco (Jaqueta / Camisa)
-  if (ny >= yLimits.shirt && ny < yLimits.face) {
-    // Camisa: centro frontal
-    if (absX < 0.12 && nz > 0.1) return 'shirt';
-    // Jaqueta: resto
-    return 'jacket';
-  }
-
-  // 5. Pernas e sapatos
-  if (ny < yLimits.shirt) {
-    if (ny < 0.1) return 'shoes';
-    return 'pants';
-  }
-
-  return 'face';
-}
-
-// ============ IMAGE TEXTURING ============
-document.getElementById('image-btn').addEventListener('click', () => {
-  document.getElementById('image-input').click();
-});
-document.getElementById('image-input').addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width; canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    referenceImage = { canvas, ctx, width: canvas.width, height: canvas.height, data };
-    const preview = document.getElementById('image-preview');
-    preview.src = img.src;
-    preview.style.display = 'block';
-    document.getElementById('apply-image-btn').disabled = false;
-    setStatus('Imagem carregada.', '#9fd');
-  };
-  img.src = URL.createObjectURL(file);
-});
-
-document.getElementById('apply-image-btn').addEventListener('click', () => {
-  if (!mainMesh) { setStatus('Carregue um modelo primeiro.', '#f66'); return; }
-  pushHistory();
-  if (referenceImage) {
-    autoColorFromImage(referenceImage);
-    setStatus('Auto-colorido com sucesso.', '#9fd');
-  } else {
-    autoColorDefault();
-    setStatus('Auto-colorido com paleta padrão.', '#9fd');
-  }
-});
-
-function srgbToLinear(c) {
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
-// Amostragem inteligente baseada na estrutura de cores da imagem de referência.
-function autoColorFromImage(img) {
-  if (!img) return;
-  
-  const geom = mainMesh.geometry;
-  const pos = geom.attributes.position;
-  const arr = colorAttr.array;
-  const { bbox } = regions;
-  const bmin = bbox.min, bsize = bbox.size;
-
-  const v = new THREE.Vector3();
-  
-  const imgW = img.width, imgH = img.height;
-  const pix = img.data.data;
-  
-  function sampleRect(x1, y1, x2, y2) {
-    let r=0, g=0, b=0, count=0;
-    const px1 = Math.floor(x1 * imgW), px2 = Math.floor(x2 * imgW);
-    const py1 = Math.floor(y1 * imgH), py2 = Math.floor(y2 * imgH);
-    for(let y = py1; y < py2; y++) {
-      for(let x = px1; x < px2; x++) {
-        const idx = (y * imgW + x) * 4;
-        r += pix[idx]; g += pix[idx+1]; b += pix[idx+2];
-        count++;
+      function showError(detail) {
+        errorDetail.textContent = detail || 'Requested device not found';
+        errorMsg.classList.add('show');
       }
-    }
-    if (count === 0) return {r: 0.5, g: 0.5, b: 0.5};
-    return { r: (r/count)/255, g: (g/count)/255, b: (b/count)/255 };
-  }
-
-  // Extraindo cores de regiões específicas da imagem (baseado em uma foto de busto)
-  const cHair = sampleRect(0.3, 0.05, 0.7, 0.15);
-  const cFace = sampleRect(0.3, 0.4, 0.7, 0.5);
-  const cEyes = sampleRect(0.4, 0.32, 0.6, 0.36); // Olhos mais ou menos aqui
-  const cMustache = sampleRect(0.42, 0.48, 0.58, 0.52);
-  const cShirt = sampleRect(0.42, 0.7, 0.58, 0.8);
-  const cJacket = sampleRect(0.1, 0.7, 0.25, 0.8);
-
-  const finalColors = {
-    hair: cHair, face: cFace, eyes: cEyes, mustache: cMustache, 
-    mouth: cFace, neck: cFace, shirt: cShirt, jacket: cJacket,
-    pants: {r: 0.2, g: 0.2, b: 0.2}, shoes: {r: 0.1, g: 0.1, b: 0.1}
-  };
-
-  let counts = {};
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
-    const nx = (v.x - bmin.x) / (bsize.x || 1) - 0.5;
-    const ny = (v.y - bmin.y) / (bsize.y || 1);
-    const nz = ((v.z - bmin.z) / (bsize.z || 1)) - 0.5;
-
-    const region = classifyVertex(nx, ny, nz);
-    counts[region] = (counts[region] || 0) + 1;
-
-    const c = finalColors[region] || { r: 0.7, g: 0.7, b: 0.7 };
-
-    arr[i*3]   = srgbToLinear(c.r);
-    arr[i*3+1] = srgbToLinear(c.g);
-    arr[i*3+2] = srgbToLinear(c.b);
-  }
-
-  colorAttr.needsUpdate = true;
-
-  const logEl = document.getElementById('auto-log');
-  logEl.innerHTML = '';
-  const labels = { hair:'Cabelo', face:'Rosto', eyes:'Olhos', mustache:'Bigode',
-                   mouth:'Boca', neck:'Pescoço', shirt:'Camisa', jacket:'Jaqueta',
-                   pants:'Calça', shoes:'Sapato' };
-  for (const k in counts) {
-    if (counts[k] > 0) {
-      const d = document.createElement('div');
-      d.textContent = `✓ ${labels[k] || k}: ${counts[k]} vértices`;
-      logEl.appendChild(d);
-    }
-  }
-}
-
-function autoColorDefault() {
-  const geom = mainMesh.geometry;
-  const pos = geom.attributes.position;
-  const arr = colorAttr.array;
-  const { bbox } = regions;
-  const bmin = bbox.min, bsize = bbox.size;
-
-  const baseColors = {
-    hair:    '#8a8a8a', face:    '#c89b7b', eyes:    '#5c3a1e',
-    mustache:'#8a8a8a', mouth:   '#a0522d', neck:    '#c89b7b',
-    shirt:   '#e8dcc0', jacket:  '#4a2e1b', pants:   '#333333', shoes: '#1a1a1a',
-  };
-  const lin = {};
-  for (const k in baseColors) {
-    const c = new THREE.Color(baseColors[k]);
-    lin[k] = [c.r, c.g, c.b];
-  }
-
-  const v = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
-    const nx = (v.x - bmin.x) / (bsize.x || 1) - 0.5;
-    const ny = (v.y - bmin.y) / (bsize.y || 1);
-    const nz = ((v.z - bmin.z) / (bsize.z || 1)) - 0.5;
-    const region = classifyVertex(nx, ny, nz);
-    const c = lin[region] || lin.face;
-    arr[i*3] = c[0]; arr[i*3+1] = c[1]; arr[i*3+2] = c[2];
-  }
-  colorAttr.needsUpdate = true;
-}
-
-// ============ COLORING (Manual) ============
-function applyColorToSelection(hexColor) {
-  if (!mainMesh) return;
-  if (currentMode === 'mesh') {
-    pushHistory();
-    setAllVerticesColor(hexColor);
-  } else {
-    setStatus('Modo Região: clique e arraste no modelo para pintar.', '#9fd');
-  }
-}
-
-function setAllVerticesColor(hexColor) {
-  const c = new THREE.Color(hexColor);
-  const arr = colorAttr.array;
-  for (let i = 0; i < arr.length; i += 3) {
-    arr[i] = c.r; arr[i+1] = c.g; arr[i+2] = c.b;
-  }
-  colorAttr.needsUpdate = true;
-}
-
-function paintVerticesAt(worldPoint, hexColor, radius) {
-  const geom = mainMesh.geometry;
-  const pos = geom.attributes.position;
-  const c = new THREE.Color(hexColor);
-  const arr = colorAttr.array;
-  const localPoint = mainMesh.worldToLocal(worldPoint.clone());
-  const r2 = radius * radius;
-  const v = new THREE.Vector3();
-  for (let i = 0; i < pos.count; i++) {
-    v.fromBufferAttribute(pos, i);
-    const dx = v.x - localPoint.x, dy = v.y - localPoint.y, dz = v.z - localPoint.z;
-    if (dx*dx + dy*dy + dz*dz <= r2) {
-      arr[i*3] = c.r; arr[i*3+1] = c.g; arr[i*3+2] = c.b;
-    }
-  }
-  colorAttr.needsUpdate = true;
-}
-
-// ============ HISTORY ============
-function pushHistory() {
-  if (!colorAttr) return;
-  history.push(new Float32Array(colorAttr.array));
-  if (history.length > 50) history.shift();
-  document.getElementById('undo-btn').disabled = false;
-}
-function undo() {
-  if (history.length === 0 || !colorAttr) return;
-  const prev = history.pop();
-  colorAttr.array.set(prev);
-  colorAttr.needsUpdate = true;
-  document.getElementById('undo-btn').disabled = history.length === 0;
-}
-function resetModel() {
-  if (!mainMesh || !originalGeometry) return;
-  pushHistory();
-  const arr = colorAttr.array;
-  for (let i = 0; i < arr.length; i += 3) {
-    arr[i] = 0.7; arr[i+1] = 0.7; arr[i+2] = 0.7;
-  }
-  colorAttr.needsUpdate = true;
-  showingOriginal = false;
-  document.getElementById('toggle-original').textContent = 'Ver Original';
-}
-
-// ============ EXPORT ============
-async function exportGLB() {
-  if (!modelRoot) return;
-  setStatus('Exportando...', '#f90');
-  const clone = modelRoot.clone(true);
-  clone.traverse(o => {
-    if (o.isMesh) {
-      if (!o.material.vertexColors) {
-        o.material = o.material.clone();
-        o.material.vertexColors = true;
-        o.material.color.set(0xffffff);
-        o.material.needsUpdate = true;
+      function hideError() {
+        errorMsg.classList.remove('show');
       }
-    }
-  });
-  const exporter = new GLTFExporter();
-  try {
-    const result = await exporter.parseAsync(clone, { binary: true });
-    const blob = new Blob([result], { type: 'model/gltf-binary' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'My 3D Model - Texturized.glb';
-    a.click();
-    URL.revokeObjectURL(url);
-    setStatus('Exportado com sucesso.', '#9fd');
-  } catch (err) {
-    console.error(err);
-    setStatus('Erro ao exportar.', '#f66');
-  }
-}
 
-// ============ UI EVENTS ============
-document.getElementById('export-btn').addEventListener('click', exportGLB);
-document.getElementById('undo-btn').addEventListener('click', undo);
-document.getElementById('reset-btn').addEventListener('click', resetModel);
+      function activateVideoStage() {
+        document.body.classList.add('video-active');
+        videoStage.classList.add('active');
+        videoIdle.currentTime = 0;
+        videoIdle.play().catch(function(){});
+        videoTalk.pause();
+        videoTalk.style.opacity = '0';
+        videoIdle.style.opacity = '1';
+        isTalking = false;
+      }
 
-document.getElementById('apply-color-btn').addEventListener('click', () => {
-  const hex = document.getElementById('color-input').value;
-  if (currentMode === 'mesh') applyColorToSelection(hex);
-  else setStatus('Modo Região: clique e arraste no modelo para pintar.', '#9fd');
-});
+      function deactivateVideoStage() {
+        consultationStarted = false;
+        document.body.classList.remove('video-active');
+        videoStage.classList.remove('active');
+        videoIdle.pause();
+        videoTalk.pause();
+        if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
+        isTalking = false;
+      }
 
-document.getElementById('mode-mesh').addEventListener('click', () => {
-  currentMode = 'mesh';
-  document.getElementById('mode-mesh').classList.add('active');
-  document.getElementById('mode-region').classList.remove('active');
-  setStatus('Modo: Mesh inteira.', '#9fd');
-});
-document.getElementById('mode-region').addEventListener('click', () => {
-  currentMode = 'region';
-  document.getElementById('mode-region').classList.add('active');
-  document.getElementById('mode-mesh').classList.remove('active');
-  setStatus('Modo: Região. Clique e arraste para pintar.', '#9fd');
-});
+      // ========== LÓGICA DE CROSSFADE RÍGIDA ==========
+      
+      function startTalking() {
+        if (silenceTimer) {
+          clearTimeout(silenceTimer);
+          silenceTimer = null;
+        }
+        
+        if (isTalking) return;
+        
+        isTalking = true;
+        videoTalk.currentTime = 0;
+        
+        var playPromise = videoTalk.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(function(e){ 
+            console.log("Erro ao dar play no video-talk:", e);
+            videoTalk.muted = true;
+            videoTalk.play().catch(function(err){ console.log("Falha no fallback:", err); });
+          });
+        }
+        
+        videoTalk.style.opacity = '1';
+        videoIdle.style.opacity = '0';
+      }
 
-document.getElementById('toggle-original').addEventListener('click', () => {
-  if (!mainMesh) return;
-  showingOriginal = !showingOriginal;
-  if (showingOriginal) {
-    if (!mainMesh.userData.savedColors) {
-      mainMesh.userData.savedColors = new Float32Array(colorAttr.array);
-    }
-    const arr = colorAttr.array;
-    for (let i = 0; i < arr.length; i += 3) { arr[i]=0.7; arr[i+1]=0.7; arr[i+2]=0.7; }
-    colorAttr.needsUpdate = true;
-    document.getElementById('toggle-original').textContent = 'Ver Colorido';
-  } else {
-    if (mainMesh.userData.savedColors) {
-      colorAttr.array.set(mainMesh.userData.savedColors);
-      colorAttr.needsUpdate = true;
-    }
-    document.getElementById('toggle-original').textContent = 'Ver Original';
-  }
-});
+      function stopTalking() {
+        if (!isTalking) return;
+        isTalking = false;
+        videoTalk.style.opacity = '0';
+        videoIdle.style.opacity = '1';
+        setTimeout(function() {
+          if (!isTalking) videoTalk.pause();
+        }, 450);
+      }
 
-document.getElementById('wireframe-btn').addEventListener('click', () => {
-  if (!mainMesh) return;
-  wireframe = !wireframe;
-  mainMesh.material.wireframe = wireframe;
-  mainMesh.material.needsUpdate = true;
-  document.getElementById('wireframe-btn').classList.toggle('active', wireframe);
-});
+      function scheduleSilenceCheck() {
+        if (silenceTimer) clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(stopTalking, 350);
+      }
 
-// ============ PAINTING ============
-renderer.domElement.addEventListener('pointerdown', (e) => {
-  if (currentMode !== 'region' || !mainMesh) return;
-  isPainting = true;
-  controls.enabled = false;
-  pushHistory();
-  paintAtPointer(e);
-});
-renderer.domElement.addEventListener('pointermove', (e) => {
-  if (currentMode === 'region' && mainMesh) updateBrushHelper(e);
-  if (isPainting) paintAtPointer(e);
-});
-renderer.domElement.addEventListener('pointerup', () => {
-  if (isPainting) { isPainting = false; controls.enabled = true; }
-});
-renderer.domElement.addEventListener('pointerleave', () => {
-  if (isPainting) { isPainting = false; controls.enabled = true; }
-});
+      function ensureAudioContext() {
+        if (!audioCtx) {
+          try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 512;
+            analyser.smoothingTimeConstant = 0.05;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+          } catch (e) {
+            console.error("Erro ao criar AudioContext:", e);
+          }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        return audioCtx;
+      }
 
-function getPointer(e) {
-  const rect = renderer.domElement.getBoundingClientRect();
-  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-}
-function paintAtPointer(e) {
-  getPointer(e);
-  raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObject(mainMesh, false);
-  if (hits.length > 0) {
-    const hex = document.getElementById('color-input').value;
-    const worldRadius = brushRadius * (mainMesh.parent ? mainMesh.parent.scale.x : 1);
-    paintVerticesAt(hits[0].point, hex, worldRadius);
-  }
-}
-function updateBrushHelper(e) {
-  getPointer(e);
-  raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObject(mainMesh, false);
-  if (hits.length > 0) {
-    if (!brushHelper) {
-      brushHelper = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 16, 12),
-        new THREE.MeshBasicMaterial({ color: 0x00ffaa, wireframe: true, transparent: true, opacity: 0.5 })
-      );
-      scene.add(brushHelper);
-    }
-    brushHelper.visible = true;
-    brushHelper.position.copy(hits[0].point);
-    const s = brushRadius * (mainMesh.parent ? mainMesh.parent.scale.x : 1);
-    brushHelper.scale.setScalar(s);
-  } else if (brushHelper) brushHelper.visible = false;
-}
+      function analyzeAudioLoop() {
+        if (!consultationStarted) {
+          requestAnimationFrame(analyzeAudioLoop);
+          return;
+        }
 
-// ============ RESIZE & LOOP ============
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-function setStatus(msg, color) {
-  const s = document.getElementById('status');
-  s.textContent = msg;
-  s.style.color = color || '#f90';
-}
-function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
-animate();
-</script>
+        if (analyser && dataArray) {
+          analyser.getByteFrequencyData(dataArray);
+          
+          var sum = 0;
+          for (var i = 2; i < dataArray.length / 2; i++) {
+            sum += dataArray[i];
+          }
+          var average = sum / (dataArray.length / 2);
+
+          if (average > 15) {
+            startTalking();
+            scheduleSilenceCheck();
+          }
+        }
+
+        requestAnimationFrame(analyzeAudioLoop);
+      }
+
+      function hookStream(stream) {
+        if (!stream || hookedStreams.has(stream)) return;
+        hookedStreams.add(stream);
+        
+        var ctx = ensureAudioContext();
+        if (!ctx || !analyser) return;
+
+        try {
+          var source = ctx.createMediaStreamSource(stream);
+          source.connect(analyser);
+        } catch (e) {
+          console.error("Erro ao conectar stream ao analisador:", e);
+        }
+      }
+
+      function scanForAudioTracks() {
+        if (!consultationStarted) return;
+
+        // Procura especificamente por tags de áudio do LiveKit
+        var audios = document.querySelectorAll('audio');
+        for (var i = 0; i < audios.length; i++) {
+          var a = audios[i];
+          if (a.srcObject instanceof MediaStream) {
+            hookStream(a.srcObject);
+          }
+        }
+
+        // Fallback para tags de vídeo (LiveKit às vezes cria vídeos ocultos para áudio)
+        var vids = document.querySelectorAll('video');
+        for (var i = 0; i < vids.length; i++) {
+          var v = vids[i];
+          if (v === videoIdle || v === videoTalk) continue;
+          if (v.srcObject instanceof MediaStream) {
+            var audioTracks = v.srcObject.getAudioTracks();
+            if (audioTracks.length > 0) {
+              hookStream(new MediaStream(audioTracks));
+            }
+          }
+        }
+      }
+
+      // ========== LÓGICA DO LIVEKIT E INTERFACE ==========
+      
+      function deepQueryAll(root, selector, out) {
+        out = out || [];
+        try { root.querySelectorAll(selector).forEach(function (el) { out.push(el); }); } catch (e) {}
+        var all = root.querySelectorAll('*');
+        for (var i = 0; i < all.length; i++) {
+          if (all[i].shadowRoot) deepQueryAll(all[i].shadowRoot, selector, out);
+        }
+        return out;
+      }
+
+      function looksLikeLauncher(el) {
+        if (!el || !el.getBoundingClientRect) return false;
+        if (el === btn || btn.contains(el)) return false;
+        if (el === slot || slot.contains(el)) return false;
+        if (el === headerAgentSlot || headerAgentSlot.contains(el)) return false;
+        if (el === videoAgentSlot || videoAgentSlot.contains(el)) return false;
+        if (el === videoStartWrap || videoStartWrap.contains(el)) return false;
+        if (el.closest && el.closest('.auth-box') && !el.closest('#agentSlot')) return false;
+
+        var tag = el.tagName;
+        if (tag === 'IFRAME') {
+          var src = (el.getAttribute('src') || '').toLowerCase();
+          if (src.indexOf('livekit') !== -1 || src.indexOf('lk') !== -1 || src.indexOf('agent') !== -1 || src === '' || src.indexOf('cloud.livekit') !== -1) return true;
+        }
+
+        var cls = (typeof el.className === 'string') ? el.className : '';
+        var aria = (el.getAttribute && el.getAttribute('aria-label') || '').toLowerCase();
+        var id = (el.id || '').toLowerCase();
+        var isLk = cls.indexOf('lk-') !== -1 || aria.indexOf('agent') !== -1 || aria.indexOf('chat') !== -1 || aria.indexOf('livekit') !== -1 || id.indexOf('lk') !== -1 || id.indexOf('livekit') !== -1 || id.indexOf('agent') !== -1;
+        if (!isLk) return false;
+        var r = el.getBoundingClientRect();
+        return r.width > 20 && r.width < 300 && r.height > 20 && r.height < 300;
+      }
+
+      function findLauncher() {
+        var candidates = deepQueryAll(document, '*');
+        for (var i = 0; i < candidates.length; i++) {
+          if (looksLikeLauncher(candidates[i])) {
+            return candidates[i].closest('button, [role="button"]') || candidates[i];
+          }
+        }
+        return null;
+      }
+
+      function paintBlack(l) {
+        if (!l) return;
+        try {
+          l.style.setProperty('background-color', '#000000', 'important');
+          l.style.setProperty('background', '#000000', 'important');
+          l.style.setProperty('color', '#ffffff', 'important');
+          l.style.setProperty('border-color', '#000000', 'important');
+          l.style.setProperty('fill', '#ffffff', 'important');
+        } catch (e) {}
+      }
+
+      function placeOverElement(l, target) {
+        if (!l || !target) return;
+        var r = target.getBoundingClientRect();
+        l.style.setProperty('position', 'fixed', 'important');
+        l.style.setProperty('top', r.top + 'px', 'important');
+        l.style.setProperty('left', r.left + 'px', 'important');
+        l.style.setProperty('right', 'auto', 'important');
+        l.style.setProperty('bottom', 'auto', 'important');
+        l.style.setProperty('width', r.width + 'px', 'important');
+        l.style.setProperty('height', r.height + 'px', 'important');
+        l.style.setProperty('transform', 'none', 'important');
+        l.style.setProperty('margin', '0', 'important');
+        l.style.setProperty('pointer-events', 'auto', 'important');
+        l.style.setProperty('z-index', '10002', 'important');
+        paintBlack(l);
+      }
+
+      function getTargetSlot() {
+        if (videoStage.classList.contains('active')) return videoAgentSlot;
+        return headerAgentSlot;
+      }
+
+      function placeOverActiveSlot(l) {
+        placeOverElement(l, getTargetSlot());
+      }
+
+      function triggerLauncher(l) {
+        if (!l) return false;
+        try { l.click(); return true; } catch (e) {}
+        try { l.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); return true; } catch (e) {}
+        return false;
+      }
+
+      function warmMic() {
+        return new Promise(function (resolve) {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            resolve({ ok: false, detail: 'Microphone API not available' }); return;
+          }
+          if (warmMicStream) {
+            var tracks = warmMicStream.getAudioTracks ? warmMicStream.getAudioTracks() : [];
+            var live = false;
+            for (var i = 0; i < tracks.length; i++) { if (tracks[i].readyState === 'live') { live = true; break; } }
+            if (live) { resolve({ ok: true }); return; }
+            warmMicStream = null;
+          }
+          navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function (stream) { warmMicStream = stream; resolve({ ok: true }); })
+            .catch(function (err) {
+              var detail = 'Requested device not found';
+              if (err && err.name === 'NotAllowedError') detail = 'Microphone permission denied';
+              else if (err && err.name === 'NotFoundError') detail = 'Requested device not found';
+              else if (err && err.name === 'NotReadableError') detail = 'Microphone is being used by another app';
+              else if (err && err.message) detail = err.message;
+              resolve({ ok: false, detail: detail });
+            });
+        });
+      }
+
+      function unlockRemoteAudio() {
+        var audios = deepQueryAll(document, 'audio');
+        for (var i = 0; i < audios.length; i++) {
+          var a = audios[i];
+          try { a.muted = false; a.autoplay = true; a.volume = 1; var p = a.play(); if (p && p.catch) p.catch(function(){}); } catch (e) {}
+        }
+      }
+
+      function installRemoteAudioUnlocker() {
+        setInterval(unlockRemoteAudio, 400);
+        ['touchstart','touchend','click','keydown','pointerdown'].forEach(function(evt){
+          document.addEventListener(evt, function () { unlockRemoteAudio(); }, { passive: true, capture: true });
+        });
+      }
+
+      function attachLauncherToActiveSlot() {
+        var target = getTargetSlot();
+        if (!target) return false;
+        var l = findLauncher();
+        if (!l) return false;
+        launcherEl = l;
+        placeOverElement(l, target);
+        if (!bgApplied) {
+          bgApplied = true;
+          setTimeout(function(){ paintBlack(l); }, 300);
+          setTimeout(function(){ paintBlack(l); }, 1000);
+        }
+        return true;
+      }
+
+      function startAgentVoice() {
+        var l = (launcherEl && document.body.contains(launcherEl)) ? launcherEl : findLauncher();
+        if (l) {
+          launcherEl = l;
+          placeOverActiveSlot(l);
+          triggerLauncher(l);
+          setTimeout(function () { triggerLauncher(l); }, 300);
+          setTimeout(function () { triggerLauncher(l); }, 1000);
+          setTimeout(unlockRemoteAudio, 1500);
+          setTimeout(unlockRemoteAudio, 3000);
+        } else {
+          setTimeout(startAgentVoice, 300);
+        }
+      }
+
+      function startAgentVoiceWithMic(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
+        hideError();
+        unlockRemoteAudio();
+        warmMic().then(function (res) {
+          if (!res.ok) { showError(res.detail); return; }
+          startAgentVoice();
+        });
+      }
+
+      function hookHangupButtons() {
+        var candidates = deepQueryAll(document, 'button, [role="button"], a, div, span');
+        for (var i = 0; i < candidates.length; i++) {
+          var el = candidates[i];
+          if (!el.getBoundingClientRect) continue;
+          if (el === btn || btn.contains(el)) continue;
+          if (el === videoStartWrap || videoStartWrap.contains(el)) continue;
+          if (el === headerAgentSlot || el === videoAgentSlot) continue;
+          if (el === launcherEl) continue;
+          if (el.closest && el.closest('.auth-box') && !el.closest('#videoStage')) continue;
+
+          var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+          var title = (el.getAttribute('title') || '').toLowerCase();
+          var text = ''; try { text = (el.innerText || el.textContent || '').toLowerCase().trim(); } catch (e) {}
+          var cls = (typeof el.className === 'string') ? el.className.toLowerCase() : '';
+          var key = aria + ' ' + title + ' ' + text + ' ' + cls;
+          var isHangup = /leave|hang\s*up|hangup|disconnect|end\s*call|end\s*room|close|sair|encerrar|desligar|finalizar|fechar/.test(key);
+
+          if (isHangup) {
+            if (el.__hangupHooked) continue;
+            el.__hangupHooked = true;
+            try {
+              el.addEventListener('click', function () {
+                setTimeout(function () {
+                  deactivateVideoStage();
+                  setTimeout(function () { placeOverActiveSlot(launcherEl); }, 100);
+                }, 300);
+              }, true);
+            } catch (e) {}
+          }
+        }
+      }
+
+      var obs = new MutationObserver(function () {
+        if (document.body.classList.contains('video-active')) hookHangupButtons();
+        if (launcherEl && document.body.contains(launcherEl)) {
+          placeOverActiveSlot(launcherEl);
+        } else {
+          attachLauncherToActiveSlot();
+        }
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+
+      setInterval(function () {
+        if (document.body.classList.contains('video-active')) hookHangupButtons();
+        scanForAudioTracks();
+      }, 300);
+
+      window.addEventListener('resize', function () {
+        if (launcherEl && document.body.contains(launcherEl)) placeOverActiveSlot(launcherEl);
+      });
+      window.addEventListener('orientationchange', function () {
+        setTimeout(function () {
+          if (launcherEl && document.body.contains(launcherEl)) placeOverActiveSlot(launcherEl);
+        }, 300);
+      });
+
+      videoStartWrap.addEventListener('click', startAgentVoiceWithMic);
+      videoStartWrap.addEventListener('touchstart', function (e) {
+        e.preventDefault(); startAgentVoiceWithMic(e);
+      }, { passive: false });
+
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        hideError();
+        consultationStarted = true;
+        activateVideoStage();
+        
+        ensureAudioContext();
+        requestAnimationFrame(analyzeAudioLoop);
+        
+        installRemoteAudioUnlocker();
+        unlockRemoteAudio();
+
+        warmMic().then(function (res) {
+          if (!res.ok) { showError(res.detail); return; }
+          var tries = 0;
+          var t = setInterval(function () {
+            if (attachLauncherToActiveSlot() || tries > 40) clearInterval(t);
+            tries++;
+          }, 200);
+        });
+      });
+
+      var triesHeader = 0;
+      var tHeader = setInterval(function () {
+        if (attachLauncherToActiveSlot() || triesHeader > 100) clearInterval(tHeader);
+        triesHeader++;
+      }, 200);
+
+      installRemoteAudioUnlocker();
+    })();
+  </script>
 </body>
 </html>
