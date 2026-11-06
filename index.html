@@ -148,6 +148,22 @@
     .video-bottom-bar { border-radius: 0; box-shadow: none; min-height: 56px; padding: 6px 18px; padding-left: calc(18px + env(safe-area-inset-left)); padding-right: calc(18px + env(safe-area-inset-right)); }
     .video-agent-slot { width: 40px; height: 40px; }
   }
+
+  #frances-avatar-wrap {
+    position: fixed; bottom: 16px; right: 16px;
+    width: 400px; height: 600px;
+    z-index: 2147483647;
+    transition: width 0.25s ease, height 0.25s ease;
+  }
+  #frances-avatar-wrap iframe {
+    width: 100%; height: 100%; border: none; display: block;
+  }
+  @media (max-width: 768px) {
+    #frances-avatar-wrap { width: 320px; height: 480px; bottom: 12px; right: 12px; }
+  }
+  @media (max-width: 480px) {
+    #frances-avatar-wrap { width: calc(100vw - 24px); height: 60vh; max-height: 480px; bottom: 12px; right: 12px; }
+  }
 </style>
 </head>
 <body>
@@ -294,8 +310,6 @@
         onsetCount = 0;
       }
 
-      // ========== TROCA IMEDIATA ==========
-      
       function startTalking() {
         if (silenceTimer) {
           clearTimeout(silenceTimer);
@@ -414,8 +428,6 @@
         }
       }
 
-      // ========== LÓGICA DO LIVEKIT E INTERFACE ==========
-      
       function deepQueryAll(root, selector, out) {
         out = out || [];
         try { root.querySelectorAll(selector).forEach(function (el) { out.push(el); }); } catch (e) {}
@@ -678,5 +690,15 @@
       installRemoteAudioUnlocker();
     })();
   </script>
+
+  <div id="frances-avatar-wrap" class="notranslate" translate="no">
+    <iframe
+      src="https://app.livelayer.studio/widget/cmw5k76by000808jvsirev604"
+      allow="microphone;camera"
+      title="Avatar Frances"
+    ></iframe>
+  </div>
+  <script src="https://app.livelayer.studio/bridge.js"></script>
+
 </body>
 </html>
