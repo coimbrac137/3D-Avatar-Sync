@@ -9,161 +9,65 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Inter', Arial, sans-serif; background: #ffffff; color: #000; -webkit-font-smoothing: antialiased; }
-  .page-header { background: #000; color: #fff; position: relative; height: 95px; display: flex; align-items: center; }
+  body {
+    font-family: 'Inter', Arial, sans-serif; background: #ffffff; color: #000;
+    -webkit-font-smoothing: antialiased; min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+
+  .page-header { background: #000; color: #fff; position: relative; height: 95px; display: flex; align-items: center; flex-shrink: 0; }
   .back-btn { position: absolute; left: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: center; text-decoration: none; height: 100%; }
   .back-btn img { height: 65px; width: auto; display: block; padding-left: 15px; }
 
-  .header-agent-slot {
-    position: absolute; right: 18px; top: 50%; transform: translateY(-50%);
-    width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
-    background: #111; pointer-events: none;
-  }
-
-  .auth-section { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 95px); padding: 60px 20px; background: #ffffff; transition: filter 0.3s; }
-  .auth-box { background: #ffffff; width: 100%; max-width: 520px; padding: 70px 55px 55px; border: none; border-radius: 24px; }
-  .auth-title { font-family: 'Poppins', sans-serif; font-size: 24px; font-weight: 400; letter-spacing: 1px; text-align: center; color: #000; margin-bottom: 10px; }
-  .auth-sub { font-size: 13px; color: #888; text-align: center; margin-bottom: 38px; letter-spacing: 0.5px; }
-
-  .avatar-card { display: flex; align-items: center; gap: 16px; background: #f5f7fb; border-radius: 14px; padding: 20px; margin-bottom: 24px; }
-  .avatar-thumb { width: 64px; height: 64px; border-radius: 50%; background: #002CF2; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
-  .avatar-info h2 { font-family: 'Poppins', sans-serif; font-size: 17px; font-weight: 500; color: #000; margin-bottom: 4px; letter-spacing: 0.3px; }
-  .avatar-info p { font-size: 13px; color: #666; }
-  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #16a34a; margin-top: 6px; letter-spacing: 0.5px; }
-  .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulse 1.5s infinite; }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-  .consultation-area { background: #f5f7fb; border-radius: 14px; padding: 30px; text-align: center; margin-bottom: 20px; }
-  .consultation-area p { color: #555; font-size: 14px; margin-bottom: 22px; line-height: 1.6; }
-
-  .agent-error-msg {
-    display: none; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
-    border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.5; text-align: left; margin-bottom: 14px;
-  }
-  .agent-error-msg.show { display: block; }
-  .agent-error-msg strong { display: block; font-size: 13px; font-weight: 600; margin-bottom: 2px; color: #991b1b; }
-  .agent-error-msg span { display: block; font-size: 12px; color: #b91c1c; }
-
-  .agent-btn-wrap { position: relative; width: 100%; height: 52px; border-radius: 14px; overflow: visible; }
-  .agent-btn-visual {
-    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; height: 100%; background: #000; color: #fff; border: none; border-radius: 14px;
-    font-family: 'Inter', Arial, sans-serif; font-size: 12px; font-weight: 600;
-    letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; position: relative; z-index: 1;
-  }
-  .agent-btn-visual span { position: relative; z-index: 2; }
-
-  .agent-slot {
-    position: absolute; top: 50%; left: 18px; transform: translateY(-50%);
-    width: 28px; height: 28px; z-index: 2; pointer-events: none;
-  }
-
-  body.video-active .page-header,
-  body.video-active .auth-section { filter: blur(8px); pointer-events: none; user-select: none; }
-
-  .video-stage {
-    display: none; position: fixed; inset: 0; z-index: 10000;
-    background: transparent; align-items: center; justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .video-stage.active { display: flex; }
-  .video-box {
-    position: relative; width: 66vw; height: 66vh; max-width: 1080px; max-height: 740px;
-    display: flex; flex-direction: column;
-  }
-  
-  .video-stack {
-    position: relative;
+  .page-content {
     flex: 1 1 auto;
-    min-height: 0;
-    width: 100%;
-    border-radius: 20px 20px 0 0;
-    overflow: hidden;
-    background: #000;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-  }
-  
-  .video-layer {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-    will-change: transform;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
   }
 
-  .video-bottom-bar {
-    display: flex; align-items: center; justify-content: center; gap: 12px;
-    background: #000; border-radius: 0 0 20px 20px; padding: 12px 18px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6); position: relative;
-    min-height: 68px; flex-shrink: 0;
-  }
+  .page-footer { background: #000; color: #fff; height: 95px; flex-shrink: 0; }
 
-  .video-start-wrap {
-    display: inline-flex; align-items: center; gap: 12px;
-    cursor: pointer; user-select: none; position: relative;
-  }
-
-  .video-agent-slot {
-    width: 44px; height: 44px; flex-shrink: 0; pointer-events: auto;
-    border-radius: 50%; overflow: hidden; background: #111; position: relative;
-  }
-
-  .video-start-text {
-    color: #ffffff; font-family: 'Inter', Arial, sans-serif; font-size: 13px;
-    font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; white-space: nowrap;
-  }
-  .video-start-wrap:hover .video-start-text { color: #cccccc; }
-
-  @media (min-width: 1441px) { .auth-box { max-width: 560px; padding: 80px 65px 65px; } .auth-title { font-size: 26px; } .auth-sub { font-size: 14px; } }
-  @media (min-width: 1025px) and (max-width: 1440px) { .auth-box { max-width: 540px; padding: 75px 60px 60px; } }
-  @media (min-width: 769px) and (max-width: 1024px) { .auth-box { max-width: 500px; padding: 60px 50px 50px; } }
-  @media (max-width: 768px) {
-    .auth-section { padding: 40px 18px; }
-    .auth-box { max-width: 520px; padding: 55px 40px 45px; }
-    .video-box { width: 94vw; height: 72vh; height: 72dvh; max-width: none; max-height: none; }
-  }
   @media (max-width: 480px) {
-    .page-header { height: 65px; } .back-btn img { height: 38px; padding-left: 10px; }
-    .auth-section { padding: 30px 16px; } .auth-box { padding: 45px 28px 38px; max-width: 100%; border-radius: 20px; }
-    .auth-title { font-size: 22px; } .auth-sub { font-size: 12px; margin-bottom: 30px; }
-    .avatar-card { padding: 16px; } .avatar-thumb { width: 54px; height: 54px; font-size: 24px; }
-    .header-agent-slot { width: 36px; height: 36px; right: 12px; }
-    .video-box { width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; }
-    .video-stack { border-radius: 0; box-shadow: none; }
-    .video-bottom-bar { border-radius: 0; box-shadow: none; padding: 12px 18px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); min-height: 72px; }
-    .video-agent-slot { width: 48px; height: 48px; }
-    .video-start-text { font-size: 12px; }
+    .page-header { height: 65px; }
+    .back-btn img { height: 38px; padding-left: 10px; }
+    .page-footer { height: 65px; }
   }
   @media (max-width: 360px) {
-    .page-header { height: 58px; } .back-btn img { height: 32px; padding-left: 8px; }
-    .auth-section { padding: 24px 12px; } .auth-box { padding: 38px 22px 32px; border-radius: 16px; }
-    .auth-title { font-size: 20px; } .auth-sub { font-size: 11px; margin-bottom: 26px; }
-    .header-agent-slot { width: 32px; height: 32px; right: 10px; }
-  }
-  @media (max-height: 500px) and (orientation: landscape) {
-    .video-box { width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; }
-    .video-stack { border-radius: 0; box-shadow: none; }
-    .video-bottom-bar { border-radius: 0; box-shadow: none; min-height: 56px; padding: 6px 18px; padding-left: calc(18px + env(safe-area-inset-left)); padding-right: calc(18px + env(safe-area-inset-right)); }
-    .video-agent-slot { width: 40px; height: 40px; }
+    .page-header { height: 58px; }
+    .back-btn img { height: 32px; padding-left: 8px; }
+    .page-footer { height: 58px; }
   }
 
   #frances-avatar-wrap {
-    position: fixed; bottom: 16px; right: 16px;
+    position: relative;
     width: 400px; height: 600px;
+    max-width: 100%;
     z-index: 2147483647;
-    transition: width 0.25s ease, height 0.25s ease;
+    overflow: hidden;
+    border-radius: 12px;
+    background: #000;
   }
   #frances-avatar-wrap iframe {
     width: 100%; height: 100%; border: none; display: block;
   }
   @media (max-width: 768px) {
-    #frances-avatar-wrap { width: 320px; height: 480px; bottom: 12px; right: 12px; }
+    #frances-avatar-wrap { width: 320px; height: 480px; }
   }
   @media (max-width: 480px) {
-    #frances-avatar-wrap { width: calc(100vw - 24px); height: 60vh; max-height: 480px; bottom: 12px; right: 12px; }
+    #frances-avatar-wrap { width: calc(100vw - 40px); height: 60vh; max-height: 480px; }
   }
+
+  /* IMAGEM DE CAPA - Deixa a parte de baixo do botão livre */
+  #frances-cover {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    bottom: 85px; /* Altura aproximada para deixar o botão do LiveLayer exposto */
+    background: url('frances.png') center/cover no-repeat;
+    z-index: 2;
+    pointer-events: none; 
+    transition: opacity 0.4s ease;
+  }
+  #frances-cover.hidden { opacity: 0; }
 </style>
 </head>
 <body>
@@ -173,532 +77,68 @@
 
   <div class="page-header notranslate" translate="no" id="pageHeader">
     <a href="#" class="back-btn"><img src="logo55.png" alt="Logo"></a>
-    <div class="header-agent-slot" id="headerAgentSlot"></div>
   </div>
 
-  <section class="auth-section notranslate" translate="no">
-    <div class="auth-box">
-      <h1 class="auth-title notranslate" translate="no">Avatar Inteligente</h1>
-      <p class="auth-sub notranslate" translate="no">Converse por voz com o assistente virtual</p>
-
-      <div class="avatar-card">
-        <div class="avatar-thumb">
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path></svg>
-        </div>
-        <div class="avatar-info">
-          <h2>Assistente Virtual</h2>
-          <p>Avatar com IA</p>
-          <div class="status">Disponível agora</div>
-        </div>
-      </div>
-
-      <div class="consultation-area">
-        <p>Clique no botão abaixo para iniciar a conversa por voz. O avatar se movimentará em tempo real conforme a inteligência artificial falar.</p>
-
-        <div class="agent-error-msg" id="agentErrorMsg">
-          <strong>Could not connect to the agent</strong>
-          <span id="agentErrorDetail">Requested device not found</span>
-        </div>
-
-        <div class="agent-btn-wrap" id="agentBtnWrap">
-          <button type="button" class="agent-btn-visual" id="startConsultBtn">
-            <span>Iniciar Conversa</span>
-          </button>
-          <div class="agent-slot" id="agentSlot"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="video-stage" id="videoStage">
-    <div class="video-box">
-      <div class="video-stack">
-        <video id="avatar-video" class="video-layer" src="frances.mp4" playsinline muted preload="auto"></video>
-      </div>
-      <div class="video-bottom-bar">
-        <div class="video-start-wrap" id="videoStartWrap">
-          <div class="video-agent-slot" id="videoAgentSlot"></div>
-          <span class="video-start-text" id="videoStartText">Começar</span>
-        </div>
-      </div>
+  <div class="page-content">
+    <div id="frances-avatar-wrap" class="notranslate" translate="no">
+      <iframe
+        id="frances-iframe"
+        src="https://app.livelayer.studio/widget/cmw5k76by000808jvsirev604"
+        allow="microphone;camera"
+        title="Avatar Frances"
+      ></iframe>
+      <div id="frances-cover"></div>
     </div>
   </div>
 
-  <script
-    src="https://cloud.livekit.io/embed-popup.js"
-    data-lk-agent="CA_4wb8jJKVXCDP"
-    data-lk-color="#002CF2"
-  ></script>
+  <div class="page-footer notranslate" translate="no"></div>
+
+  <script src="https://app.livelayer.studio/bridge.js"></script>
 
   <script>
     (function () {
-      var btn = document.getElementById('startConsultBtn');
-      var slot = document.getElementById('agentSlot');
-      var headerAgentSlot = document.getElementById('headerAgentSlot');
-      var videoAgentSlot = document.getElementById('videoAgentSlot');
-      var videoStartWrap = document.getElementById('videoStartWrap');
-      var errorMsg = document.getElementById('agentErrorMsg');
-      var errorDetail = document.getElementById('agentErrorDetail');
-      var videoStage = document.getElementById('videoStage');
-      var video = document.getElementById('avatar-video');
+      var cover = document.getElementById('frances-cover');
+      var hidden = false;
 
-      var IDLE_START = 0;
-      var IDLE_END   = 3;
-      var TALK_START = 3;
-      var TALK_END   = 5;
-
-      var VOICE_THRESHOLD = 10;
-      var VOICE_ONSET_FRAMES = 1;
-      var SILENCE_TIMEOUT_MS = 220;
-      var SAMPLE_RATE_HZ = 90;
-
-      var launcherEl = null;
-      var bgApplied = false;
-      var warmMicStream = null;
-      var consultationStarted = false;
-      var isTalking = false;
-      var silenceTimer = null;
-      var onsetCount = 0;
-      
-      var audioCtx = null;
-      var analyser = null;
-      var dataArray = null;
-      var hookedStreams = new WeakSet();
-      var connectedSources = [];
-      var lastAnalysisTime = 0;
-
-      function showError(detail) {
-        errorDetail.textContent = detail || 'Requested device not found';
-        errorMsg.classList.add('show');
-      }
-      function hideError() {
-        errorMsg.classList.remove('show');
+      function hideCover() {
+        if (hidden) return;
+        hidden = true;
+        cover.classList.add('hidden');
+        setTimeout(function() {
+          if (cover && cover.parentNode) cover.parentNode.removeChild(cover);
+        }, 500);
       }
 
-      function onTimeUpdate() {
-        if (!isTalking) {
-          if (video.currentTime >= IDLE_END - 0.05 || video.currentTime < IDLE_START - 0.05) {
-            try { video.currentTime = IDLE_START; } catch(e){}
+      // Monitora o microfone para esconder a imagem APENAS quando houver som
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        var analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        var dataArray = new Uint8Array(analyser.frequencyBinCount);
+        var source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        function checkAudio() {
+          if (hidden) return;
+          analyser.getByteFrequencyData(dataArray);
+          var sum = 0;
+          for (var i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
           }
-        } else {
-          if (video.currentTime >= TALK_END - 0.05 || video.currentTime < TALK_START - 0.05) {
-            try { video.currentTime = TALK_START; } catch(e){}
+          var average = sum / dataArray.length;
+
+          if (average > 15) { 
+            hideCover();
+          } else {
+            requestAnimationFrame(checkAudio);
           }
         }
-      }
-
-      function activateVideoStage() {
-        document.body.classList.add('video-active');
-        videoStage.classList.add('active');
-        isTalking = false;
-        onsetCount = 0;
-        try {
-          video.currentTime = IDLE_START;
-          video.play().catch(function(){});
-        } catch(e){}
-        video.addEventListener('timeupdate', onTimeUpdate);
-      }
-
-      function deactivateVideoStage() {
-        consultationStarted = false;
-        document.body.classList.remove('video-active');
-        videoStage.classList.remove('active');
-        try { video.removeEventListener('timeupdate', onTimeUpdate); } catch(e){}
-        try { video.pause(); } catch(e){}
-        if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
-        isTalking = false;
-        onsetCount = 0;
-      }
-
-      function startTalking() {
-        if (silenceTimer) {
-          clearTimeout(silenceTimer);
-          silenceTimer = null;
-        }
-        if (isTalking) return;
-        isTalking = true;
-        try {
-          video.currentTime = TALK_START;
-          if (video.paused) video.play().catch(function(){});
-        } catch(e){}
-      }
-
-      function stopTalking() {
-        if (!isTalking) return;
-        isTalking = false;
-        try {
-          video.currentTime = IDLE_START;
-          if (video.paused) video.play().catch(function(){});
-        } catch(e){}
-      }
-
-      function scheduleSilenceCheck() {
-        if (silenceTimer) clearTimeout(silenceTimer);
-        silenceTimer = setTimeout(stopTalking, SILENCE_TIMEOUT_MS);
-      }
-
-      function ensureAudioContext() {
-        if (!audioCtx) {
-          try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 1024;
-            analyser.smoothingTimeConstant = 0.05;
-            dataArray = new Uint8Array(analyser.frequencyBinCount);
-          } catch (e) {
-            console.error("Erro ao criar AudioContext:", e);
-          }
-        }
-        if (audioCtx && audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-        return audioCtx;
-      }
-
-      function analyzeVoiceBand() {
-        analyser.getByteFrequencyData(dataArray);
-        var nyquist = audioCtx.sampleRate / 2;
-        var binSize = nyquist / dataArray.length;
-        var lowBin = Math.floor(85 / binSize);
-        var highBin = Math.min(Math.ceil(4000 / binSize), dataArray.length - 1);
-        var sum = 0;
-        var count = 0;
-        for (var i = lowBin; i <= highBin; i++) {
-          sum += dataArray[i];
-          count++;
-        }
-        return count > 0 ? (sum / count) : 0;
-      }
-
-      function analyzeAudioLoop() {
-        if (!consultationStarted) {
-          requestAnimationFrame(analyzeAudioLoop);
-          return;
-        }
-
-        if (analyser && dataArray) {
-          var now = performance.now();
-          if (now - lastAnalysisTime >= (1000 / SAMPLE_RATE_HZ)) {
-            lastAnalysisTime = now;
-            var voiceLevel = analyzeVoiceBand();
-
-            if (voiceLevel > VOICE_THRESHOLD) {
-              onsetCount++;
-              if (onsetCount >= VOICE_ONSET_FRAMES) {
-                if (!isTalking) startTalking();
-                scheduleSilenceCheck();
-              }
-            } else {
-              onsetCount = 0;
-            }
-          }
-        }
-
-        requestAnimationFrame(analyzeAudioLoop);
-      }
-
-      function hookStream(stream) {
-        if (!stream || hookedStreams.has(stream)) return;
-        var audioTracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
-        if (audioTracks.length === 0) return;
-        hookedStreams.add(stream);
-        
-        var ctx = ensureAudioContext();
-        if (!ctx || !analyser) return;
-
-        try {
-          var source = ctx.createMediaStreamSource(stream);
-          source.connect(analyser);
-          connectedSources.push(source);
-        } catch (e) {
-          console.error("Erro ao conectar stream ao analisador:", e);
-        }
-      }
-
-      function scanForAudioTracks() {
-        if (!consultationStarted) return;
-
-        var allEls = deepQueryAll(document, 'audio, video');
-        for (var i = 0; i < allEls.length; i++) {
-          var el = allEls[i];
-          if (el === video) continue;
-          if (el.srcObject instanceof MediaStream) {
-            hookStream(el.srcObject);
-          }
-        }
-      }
-
-      function deepQueryAll(root, selector, out) {
-        out = out || [];
-        try { root.querySelectorAll(selector).forEach(function (el) { out.push(el); }); } catch (e) {}
-        var all = root.querySelectorAll('*');
-        for (var i = 0; i < all.length; i++) {
-          if (all[i].shadowRoot) deepQueryAll(all[i].shadowRoot, selector, out);
-        }
-        return out;
-      }
-
-      function looksLikeLauncher(el) {
-        if (!el || !el.getBoundingClientRect) return false;
-        if (el === btn || btn.contains(el)) return false;
-        if (el === slot || slot.contains(el)) return false;
-        if (el === headerAgentSlot || headerAgentSlot.contains(el)) return false;
-        if (el === videoAgentSlot || videoAgentSlot.contains(el)) return false;
-        if (el === videoStartWrap || videoStartWrap.contains(el)) return false;
-        if (el.closest && el.closest('.auth-box') && !el.closest('#agentSlot')) return false;
-
-        var tag = el.tagName;
-        if (tag === 'IFRAME') {
-          var src = (el.getAttribute('src') || '').toLowerCase();
-          if (src.indexOf('livekit') !== -1 || src.indexOf('lk') !== -1 || src.indexOf('agent') !== -1 || src === '' || src.indexOf('cloud.livekit') !== -1) return true;
-        }
-
-        var cls = (typeof el.className === 'string') ? el.className : '';
-        var aria = (el.getAttribute && el.getAttribute('aria-label') || '').toLowerCase();
-        var id = (el.id || '').toLowerCase();
-        var isLk = cls.indexOf('lk-') !== -1 || aria.indexOf('agent') !== -1 || aria.indexOf('chat') !== -1 || aria.indexOf('livekit') !== -1 || id.indexOf('lk') !== -1 || id.indexOf('livekit') !== -1 || id.indexOf('agent') !== -1;
-        if (!isLk) return false;
-        var r = el.getBoundingClientRect();
-        return r.width > 20 && r.width < 300 && r.height > 20 && r.height < 300;
-      }
-
-      function findLauncher() {
-        var candidates = deepQueryAll(document, '*');
-        for (var i = 0; i < candidates.length; i++) {
-          if (looksLikeLauncher(candidates[i])) {
-            return candidates[i].closest('button, [role="button"]') || candidates[i];
-          }
-        }
-        return null;
-      }
-
-      function paintBlack(l) {
-        if (!l) return;
-        try {
-          l.style.setProperty('background-color', '#000000', 'important');
-          l.style.setProperty('background', '#000000', 'important');
-          l.style.setProperty('color', '#ffffff', 'important');
-          l.style.setProperty('border-color', '#000000', 'important');
-          l.style.setProperty('fill', '#ffffff', 'important');
-        } catch (e) {}
-      }
-
-      function placeOverElement(l, target) {
-        if (!l || !target) return;
-        var r = target.getBoundingClientRect();
-        l.style.setProperty('position', 'fixed', 'important');
-        l.style.setProperty('top', r.top + 'px', 'important');
-        l.style.setProperty('left', r.left + 'px', 'important');
-        l.style.setProperty('right', 'auto', 'important');
-        l.style.setProperty('bottom', 'auto', 'important');
-        l.style.setProperty('width', r.width + 'px', 'important');
-        l.style.setProperty('height', r.height + 'px', 'important');
-        l.style.setProperty('transform', 'none', 'important');
-        l.style.setProperty('margin', '0', 'important');
-        l.style.setProperty('pointer-events', 'auto', 'important');
-        l.style.setProperty('z-index', '10002', 'important');
-        paintBlack(l);
-      }
-
-      function getTargetSlot() {
-        if (videoStage.classList.contains('active')) return videoAgentSlot;
-        return headerAgentSlot;
-      }
-
-      function placeOverActiveSlot(l) {
-        placeOverElement(l, getTargetSlot());
-      }
-
-      function triggerLauncher(l) {
-        if (!l) return false;
-        try { l.click(); return true; } catch (e) {}
-        try { l.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window })); return true; } catch (e) {}
-        return false;
-      }
-
-      function warmMic() {
-        return new Promise(function (resolve) {
-          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            resolve({ ok: false, detail: 'Microphone API not available' }); return;
-          }
-          if (warmMicStream) {
-            var tracks = warmMicStream.getAudioTracks ? warmMicStream.getAudioTracks() : [];
-            var live = false;
-            for (var i = 0; i < tracks.length; i++) { if (tracks[i].readyState === 'live') { live = true; break; } }
-            if (live) { resolve({ ok: true }); return; }
-            warmMicStream = null;
-          }
-          navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(function (stream) { warmMicStream = stream; resolve({ ok: true }); })
-            .catch(function (err) {
-              var detail = 'Requested device not found';
-              if (err && err.name === 'NotAllowedError') detail = 'Microphone permission denied';
-              else if (err && err.name === 'NotFoundError') detail = 'Requested device not found';
-              else if (err && err.name === 'NotReadableError') detail = 'Microphone is being used by another app';
-              else if (err && err.message) detail = err.message;
-              resolve({ ok: false, detail: detail });
-            });
-        });
-      }
-
-      function unlockRemoteAudio() {
-        var audios = deepQueryAll(document, 'audio');
-        for (var i = 0; i < audios.length; i++) {
-          var a = audios[i];
-          try { a.muted = false; a.autoplay = true; a.volume = 1; var p = a.play(); if (p && p.catch) p.catch(function(){}); } catch (e) {}
-        }
-      }
-
-      function installRemoteAudioUnlocker() {
-        setInterval(unlockRemoteAudio, 400);
-        ['touchstart','touchend','click','keydown','pointerdown'].forEach(function(evt){
-          document.addEventListener(evt, function () { unlockRemoteAudio(); }, { passive: true, capture: true });
-        });
-      }
-
-      function attachLauncherToActiveSlot() {
-        var target = getTargetSlot();
-        if (!target) return false;
-        var l = findLauncher();
-        if (!l) return false;
-        launcherEl = l;
-        placeOverElement(l, target);
-        if (!bgApplied) {
-          bgApplied = true;
-          setTimeout(function(){ paintBlack(l); }, 300);
-          setTimeout(function(){ paintBlack(l); }, 1000);
-        }
-        return true;
-      }
-
-      function startAgentVoice() {
-        var l = (launcherEl && document.body.contains(launcherEl)) ? launcherEl : findLauncher();
-        if (l) {
-          launcherEl = l;
-          placeOverActiveSlot(l);
-          triggerLauncher(l);
-          setTimeout(function () { triggerLauncher(l); }, 300);
-          setTimeout(function () { triggerLauncher(l); }, 1000);
-          setTimeout(unlockRemoteAudio, 1500);
-          setTimeout(unlockRemoteAudio, 3000);
-        } else {
-          setTimeout(startAgentVoice, 300);
-        }
-      }
-
-      function startAgentVoiceWithMic(e) {
-        if (e && e.preventDefault) e.preventDefault();
-        if (e && e.stopPropagation) e.stopPropagation();
-        hideError();
-        unlockRemoteAudio();
-        warmMic().then(function (res) {
-          if (!res.ok) { showError(res.detail); return; }
-          startAgentVoice();
-        });
-      }
-
-      function hookHangupButtons() {
-        var candidates = deepQueryAll(document, 'button, [role="button"], a, div, span');
-        for (var i = 0; i < candidates.length; i++) {
-          var el = candidates[i];
-          if (!el.getBoundingClientRect) continue;
-          if (el === btn || btn.contains(el)) continue;
-          if (el === videoStartWrap || videoStartWrap.contains(el)) continue;
-          if (el === headerAgentSlot || el === videoAgentSlot) continue;
-          if (el === launcherEl) continue;
-          if (el.closest && el.closest('.auth-box') && !el.closest('#videoStage')) continue;
-
-          var aria = (el.getAttribute('aria-label') || '').toLowerCase();
-          var title = (el.getAttribute('title') || '').toLowerCase();
-          var text = ''; try { text = (el.innerText || el.textContent || '').toLowerCase().trim(); } catch (e) {}
-          var cls = (typeof el.className === 'string') ? el.className.toLowerCase() : '';
-          var key = aria + ' ' + title + ' ' + text + ' ' + cls;
-          var isHangup = /leave|hang\s*up|hangup|disconnect|end\s*call|end\s*room|close|sair|encerrar|desligar|finalizar|fechar/.test(key);
-
-          if (isHangup) {
-            if (el.__hangupHooked) continue;
-            el.__hangupHooked = true;
-            try {
-              el.addEventListener('click', function () {
-                setTimeout(function () {
-                  deactivateVideoStage();
-                  setTimeout(function () { placeOverActiveSlot(launcherEl); }, 100);
-                }, 300);
-              }, true);
-            } catch (e) {}
-          }
-        }
-      }
-
-      var obs = new MutationObserver(function () {
-        if (document.body.classList.contains('video-active')) hookHangupButtons();
-        if (launcherEl && document.body.contains(launcherEl)) {
-          placeOverActiveSlot(launcherEl);
-        } else {
-          attachLauncherToActiveSlot();
-        }
+        checkAudio();
+      }).catch(function (err) {
+        console.log("Microfone não autorizado.");
       });
-      obs.observe(document.body, { childList: true, subtree: true });
-
-      setInterval(function () {
-        if (document.body.classList.contains('video-active')) hookHangupButtons();
-        scanForAudioTracks();
-      }, 200);
-
-      window.addEventListener('resize', function () {
-        if (launcherEl && document.body.contains(launcherEl)) placeOverActiveSlot(launcherEl);
-      });
-      window.addEventListener('orientationchange', function () {
-        setTimeout(function () {
-          if (launcherEl && document.body.contains(launcherEl)) placeOverActiveSlot(launcherEl);
-        }, 300);
-      });
-
-      videoStartWrap.addEventListener('click', startAgentVoiceWithMic);
-      videoStartWrap.addEventListener('touchstart', function (e) {
-        e.preventDefault(); startAgentVoiceWithMic(e);
-      }, { passive: false });
-
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        hideError();
-        consultationStarted = true;
-        activateVideoStage();
-        
-        ensureAudioContext();
-        requestAnimationFrame(analyzeAudioLoop);
-        
-        installRemoteAudioUnlocker();
-        unlockRemoteAudio();
-
-        warmMic().then(function (res) {
-          if (!res.ok) { showError(res.detail); return; }
-          var tries = 0;
-          var t = setInterval(function () {
-            if (attachLauncherToActiveSlot() || tries > 40) clearInterval(t);
-            tries++;
-          }, 200);
-        });
-      });
-
-      var triesHeader = 0;
-      var tHeader = setInterval(function () {
-        if (attachLauncherToActiveSlot() || triesHeader > 100) clearInterval(tHeader);
-        triesHeader++;
-      }, 200);
-
-      installRemoteAudioUnlocker();
     })();
   </script>
-
-  <div id="frances-avatar-wrap" class="notranslate" translate="no">
-    <iframe
-      src="https://app.livelayer.studio/widget/cmw5k76by000808jvsirev604"
-      allow="microphone;camera"
-      title="Avatar Frances"
-    ></iframe>
-  </div>
-  <script src="https://app.livelayer.studio/bridge.js"></script>
 
 </body>
 </html>
